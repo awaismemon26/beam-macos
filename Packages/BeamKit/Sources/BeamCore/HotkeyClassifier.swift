@@ -72,13 +72,22 @@ public struct HotkeyClassifier: Sendable {
         case let .keyDown(keyCode, mods, isRepeat):
             let action = classifyKeyDown(keyCode: keyCode, mods: mods, isRepeat: isRepeat)
             if action != .pass { swallowedDowns.insert(keyCode) }
+            // Track open/closed here, synchronously, so a quick Control release can't race the UI.
+            switch action {
+            case .switcher(.tab): isSwitcherOpen = true
+            case .switcher(.escape): isSwitcherOpen = false
+            default: break
+            }
             return action
 
         case let .keyUp(keyCode, _):
             return swallowedDowns.remove(keyCode) != nil ? .swallow : .pass
 
         case let .flagsChanged(mods):
-            if isSwitcherOpen && !mods.contains(.control) { return .switcher(.controlReleased) }
+            if isSwitcherOpen && !mods.contains(.control) {
+                isSwitcherOpen = false
+                return .switcher(.controlReleased)
+            }
             return .pass
         }
     }

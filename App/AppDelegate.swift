@@ -10,6 +10,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     let enumerator = WindowEnumerator()
     let activity = WindowActivityMonitor()
+    private var eventTap: EventTap?
+    private var switcher: SwitcherController?
     #if DEBUG
     private let focusMenu = NSMenu(title: "Focus window")
     #endif
@@ -34,6 +36,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         activity.start()
         Task { _ = await enumerator.allWindows() } // warm the cache
+
+        let tap = EventTap(rootSearch: .defaultRootSearch) { action in
+            MainActor.assumeIsolated {
+                (NSApp.delegate as? AppDelegate)?.perform(action)
+            }
+        }
+        switcher = SwitcherController(enumerator: enumerator, activity: activity) { [weak tap] open in
+            tap?.setSwitcherOpen(open)
+        }
+        if tap.start() {
+            eventTap = tap
+        } else {
+            log.error("Could not create the keyboard event tap")
+        }
+    }
+
+    private func perform(_ action: HotkeyAction) {
+        switch action {
+        case let .switcher(key):
+            switcher?.handle(key)
+        case .openWindowSearch, .toggleRootSearch, .pass, .swallow, .reenableTap:
+            break
+        }
     }
 
     private func showOnboarding() {

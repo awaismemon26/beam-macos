@@ -82,4 +82,24 @@ import Testing
         let data = try JSONEncoder().encode(KeyCombo.defaultRootSearch)
         #expect(try JSONDecoder().decode(KeyCombo.self, from: data) == .defaultRootSearch)
     }
+
+    @Test func ctrlTabMarksSwitcherOpenImmediately() {
+        var c = HotkeyClassifier()
+        _ = c.classify(down(tab, [.control]))
+        #expect(c.isSwitcherOpen)
+        #expect(c.classify(.flagsChanged(modifiers: [])) == .switcher(.controlReleased))
+    }
+    @Test func controlReleaseMarksSwitcherClosed() {
+        var c = HotkeyClassifier()
+        _ = c.classify(down(tab, [.control]))
+        _ = c.classify(.flagsChanged(modifiers: []))
+        #expect(!c.isSwitcherOpen)
+        #expect(c.classify(.flagsChanged(modifiers: [])) == .pass)
+    }
+    @Test func escapeMarksSwitcherClosed() {
+        var c = HotkeyClassifier()
+        _ = c.classify(down(tab, [.control]))
+        _ = c.classify(down(esc, [.control]))
+        #expect(!c.isSwitcherOpen)
+    }
 }

@@ -31,4 +31,11 @@ public struct SwitcherStateMachine: Sendable {
             return .close
         }
     }
+
+    /// Re-applies the opening highlight after the window list loaded late (only meaningful before the
+    /// user has moved). Returns the new highlight.
+    public mutating func resetHighlight(itemCount: Int) -> Int {
+        highlighted = isOpen && itemCount > 1 ? 1 : 0
+        return highlighted
+    }
 }

@@ -54,4 +54,16 @@ import Testing
         var s = SwitcherStateMachine()
         #expect(s.handle(.enter, itemCount: 3) == .none)
     }
+
+    @Test func resetHighlightAfterLateLoadPicksSecond() {
+        var s = SwitcherStateMachine()
+        _ = s.handle(.tab(shift: false), itemCount: 0)
+        #expect(s.resetHighlight(itemCount: 3) == 1)
+        #expect(s.handle(.enter, itemCount: 3) == .focus(index: 1))
+    }
+    @Test func resetHighlightWhileClosedIsZero() {
+        var s = SwitcherStateMachine()
+        #expect(s.resetHighlight(itemCount: 3) == 0)
+        #expect(!s.isOpen)
+    }
 }
