@@ -4,11 +4,15 @@ import SwiftUI
 
 /// Composition root: owns long-lived services, panels, hotkeys and the menu-bar item.
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var onboardingWindow: NSWindow?
 
     let enumerator = WindowEnumerator()
+    let activity = WindowActivityMonitor()
+    #if DEBUG
+    private let focusMenu = NSMenu(title: "Focus window")
+    #endif
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         installStatusItem()
@@ -25,6 +29,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Everything that needs Accessibility access.
     private func startServices() {
         log.info("Accessibility granted; starting services")
+        activity.onWindowsChanged = { [enumerator] pid in
+            Task { await enumerator.invalidate(pid: pid) }
+        }
+        activity.start()
+        Task { _ = await enumerator.allWindows() } // warm the cache
     }
 
     private func showOnboarding() {
@@ -64,6 +73,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let dump = NSMenuItem(title: "Dump windows", action: #selector(dumpWindows), keyEquivalent: "")
         dump.target = self
         menu.addItem(dump)
+        let focus = NSMenuItem(title: "Focus window", action: nil, keyEquivalent: "")
+        focusMenu.delegate = self
+        focus.submenu = focusMenu
+        menu.addItem(focus)
         #endif
 
         menu.addItem(.separator())
@@ -87,9 +100,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let windows = await enumerator.allWindows()
             let ms = Int(Date().timeIntervalSince(start) * 1000)
             log.info("Dump: \(windows.count) windows in \(ms) ms")
-            for w in windows {
+            for w in activity.mru.ordered(windows) {
                 log.info("  \(w.appName, privacy: .public) | \(w.displayTitle, privacy: .public) | \(w.badge ?? "-", privacy: .public) | reachable=\(w.isReachable)")
             }
+        }
+    }
+
+    /// Fills the debug "Focus window" submenu from the cached enumeration.
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        guard menu === focusMenu else { return }
+        menu.removeAllItems()
+        let windows = MainActor.assumeIsolated { cachedForMenu }
+        for w in windows {
+            let item = NSMenuItem(title: "\(w.appName) — \(w.displayTitle) \(w.badge ?? "")", action: #selector(focusFromMenu(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = w.id
+            item.isEnabled = w.isReachable
+            menu.addItem(item)
+        }
+        Task { cachedForMenu = await enumerator.allWindows() }
+    }
+
+    private var cachedForMenu: [WindowInfo] = []
+
+    @objc private func focusFromMenu(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? UInt32,
+              let window = cachedForMenu.first(where: { $0.id == id }) else { return }
+        Task {
+            let element = await enumerator.axElement(for: id)
+            let result = await WindowFocuser.focus(window, element: element)
+            if result == .focused { activity.touch(id) }
+            log.info("Focus \(window.displayTitle, privacy: .public): \(String(describing: result), privacy: .public)")
         }
     }
     #endif
