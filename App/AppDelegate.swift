@@ -51,9 +51,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         activity.start()
         Task { _ = await enumerator.allWindows() } // warm the cache
 
-        let tap = EventTap(rootSearch: settings.rootHotkey) { action in
+        // Capture self directly: under @NSApplicationDelegateAdaptor, NSApp.delegate is SwiftUI's own object.
+        let tap = EventTap(rootSearch: settings.rootHotkey) { [weak self] action in
             MainActor.assumeIsolated {
-                (NSApp.delegate as? AppDelegate)?.perform(action)
+                self?.perform(action)
             }
         }
         switcher = SwitcherController(enumerator: enumerator, activity: activity) { [weak tap] open in
