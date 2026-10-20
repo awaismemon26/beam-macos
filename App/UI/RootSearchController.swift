@@ -1,0 +1,188 @@
+import AppKit
+import BeamCalc
+import BeamCore
+import SwiftUI
+
+enum RootCommand: String, CaseIterable {
+    case switchWindows = "Switch Windows"
+    case settings = "Beam Settings"
+
+    var systemImage: String {
+        switch self {
+        case .switchWindows: "macwindow.on.rectangle"
+        case .settings: "gearshape"
+        }
+    }
+}
+
+enum RootItem: Identifiable, Equatable {
+    case calculation(CalculationResult)
+    case app(AppEntry)
+    case command(RootCommand)
+
+    var id: String {
+        switch self {
+        case .calculation: "calc"
+        case let .app(app): "app:" + app.id
+        case let .command(command): "cmd:" + command.rawValue
+        }
+    }
+}
+
+@MainActor @Observable
+final class RootSearchModel {
+    var query = ""
+    var items: [RootItem] = []
+    var selection = 0
+    var presentCount = 0
+    var showsCopied = false
+    var icons: [String: NSImage] = [:]
+}
+
+/// Option+Space: launch apps, run calculations, jump to window search.
+@MainActor
+final class RootSearchController {
+    let calculator = CalculatorService()
+    private let appIndex = AppIndex()
+    private let usage = UsageStore()
+    private let model = RootSearchModel()
+    private let panel = BeamPanel(size: Theme.rootSize, acceptsKeyboard: true)
+    private let openWindowSearch: () -> Void
+    private let openSettings: () -> Void
+    private var apps: [AppEntry] = []
+    private var calcTask: Task<Void, Never>?
+    private var calcResult: CalculationResult?
+    private static let rateRefreshInterval: Duration = .seconds(6 * 3600)
+
+    init(openWindowSearch: @escaping () -> Void, openSettings: @escaping () -> Void) {
+        self.openWindowSearch = openWindowSearch
+        self.openSettings = openSettings
+        panel.host(RootSearchView(
+            model: model,
+            onQueryChange: { [weak self] in self?.queryChanged() },
+            onMove: { [weak self] delta in self?.move(delta) },
+            onSubmit: { [weak self] in self?.activate(self?.model.selection ?? 0) },
+            onCancel: { [weak self] in self?.dismiss() },
+            onActivate: { [weak self] index in self?.activate(index) },
+            onSettings: { [weak self] in self?.dismiss(); openSettings() }
+        ))
+        panel.onResignKey = { [weak self] in self?.dismiss() }
+
+        Task { [weak self, appIndex] in
+            await appIndex.start { [weak self] in
+                Task { @MainActor in await self?.reloadApps() }
+            }
+            await self?.reloadApps()
+        }
+        Task { [calculator] in
+            while !Task.isCancelled {
+                await calculator.refreshRates()
+                try? await Task.sleep(for: Self.rateRefreshInterval)
+            }
+        }
+    }
+
+    func toggle() {
+        panel.isVisible ? dismiss() : show()
+    }
+
+    func show() {
+        let signpost = Signpost.begin("root.open")
+        model.query = ""
+        model.showsCopied = false
+        calcResult = nil
+        rebuildItems()
+        model.presentCount += 1
+        panel.present()
+        Signpost.end("root.open", signpost)
+    }
+
+    func dismiss() {
+        calcTask?.cancel()
+        panel.dismiss()
+    }
+
+    private func reloadApps() async {
+        apps = await appIndex.apps()
+        if panel.isVisible { rebuildItems() }
+    }
+
+    private func queryChanged() {
+        let signpost = Signpost.begin("root.query")
+        let query = model.query
+        calcResult = nil
+        rebuildItems()
+        model.selection = 0
+        Signpost.end("root.query", signpost)
+
+        calcTask?.cancel()
+        guard CalculatorGate.looksLikeCalculation(query) else { return }
+        calcTask = Task { [calculator] in
+            let result = await calculator.evaluate(query)
+            guard !Task.isCancelled, model.query == query else { return }
+            calcResult = result
+            rebuildItems()
+            if result != nil { model.selection = 0 }
+        }
+    }
+
+    /// Calculator card (if any) on top, then apps, then matching commands. The calc row never removes app rows.
+    private func rebuildItems() {
+        let query = model.query
+        var items: [RootItem] = []
+        if let calcResult { items.append(.calculation(calcResult)) }
+        items += AppRanker.rank(apps, query: query, usage: usage.stats, now: Date()).map(RootItem.app)
+        if !query.trimmingCharacters(in: .whitespaces).isEmpty {
+            let commands = RootCommand.allCases
+                .compactMap { command in FuzzyMatcher.match(query, in: command.rawValue).map { (command, $0) } }
+                .sorted { $0.1 > $1.1 }
+                .map { RootItem.command($0.0) }
+            items += commands
+        }
+        model.items = items
+        if model.selection >= items.count { model.selection = max(items.count - 1, 0) }
+        loadIcons(for: items)
+    }
+
+    private func loadIcons(for items: [RootItem]) {
+        for case let .app(app) in items where model.icons[app.id] == nil {
+            let path = app.id
+            Task.detached(priority: .userInitiated) {
+                let icon = NSWorkspace.shared.icon(forFile: path)
+                await MainActor.run { [weak self] in self?.model.icons[path] = icon }
+            }
+        }
+    }
+
+    private func move(_ delta: Int) {
+        let count = model.items.count
+        guard count > 0 else { return }
+        withAnimation(Theme.spring) { model.selection = (model.selection + delta + count) % count }
+    }
+
+    private func activate(_ index: Int) {
+        guard model.items.indices.contains(index) else { return }
+        switch model.items[index] {
+        case let .calculation(result):
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(result.value, forType: .string)
+            withAnimation(Theme.spring) { model.showsCopied = true }
+            Task {
+                try? await Task.sleep(for: .milliseconds(600))
+                dismiss()
+            }
+        case let .app(app):
+            usage.record(app.id)
+            dismiss()
+            NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: app.id), configuration: .init()) { _, error in
+                if let error { log.error("Launch failed: \(error.localizedDescription, privacy: .public)") }
+            }
+        case .command(.switchWindows):
+            dismiss()
+            openWindowSearch()
+        case .command(.settings):
+            dismiss()
+            openSettings()
+        }
+    }
+}

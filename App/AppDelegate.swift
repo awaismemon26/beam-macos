@@ -13,12 +13,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var eventTap: EventTap?
     private var switcher: SwitcherController?
     private(set) var windowSearch: WindowSearchController?
+    private(set) var rootSearch: RootSearchController?
     #if DEBUG
     private let focusMenu = NSMenu(title: "Focus window")
     #endif
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         installStatusItem()
+        // Launcher + calculator need no permission; window features start once Accessibility is granted.
+        rootSearch = RootSearchController(
+            openWindowSearch: { [weak self] in self?.windowSearch?.show() },
+            openSettings: { [weak self] in self?.openSettings() }
+        )
         if !PrivateAPIs.missingSymbols.isEmpty {
             log.error("Missing private symbols: \(PrivateAPIs.missingSymbols.joined(separator: ", "), privacy: .public)")
         }
@@ -60,7 +66,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             switcher?.handle(key)
         case .openWindowSearch:
             windowSearch?.show()
-        case .toggleRootSearch, .pass, .swallow, .reenableTap:
+        case .toggleRootSearch:
+            rootSearch?.toggle()
+        case .pass, .swallow, .reenableTap:
             break
         }
     }
@@ -115,7 +123,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem = item
     }
 
-    @objc private func openBeam() {}
+    @objc private func openBeam() {
+        rootSearch?.show()
+    }
 
     @objc func openSettings() {
         NSApp.activate()
