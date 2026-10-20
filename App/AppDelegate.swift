@@ -1,4 +1,5 @@
 import AppKit
+import BeamCalc
 import BeamCore
 import SwiftUI
 
@@ -7,6 +8,10 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var onboardingWindow: NSWindow?
+
+    let settings = AppSettings()
+    let calculator = CalculatorService()
+    private var settingsWindow: NSWindow?
 
     let enumerator = WindowEnumerator()
     let activity = WindowActivityMonitor()
@@ -21,7 +26,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         installStatusItem()
         // Launcher + calculator need no permission; window features start once Accessibility is granted.
+        LoginItem.applyDefaultOnce()
         rootSearch = RootSearchController(
+            calculator: calculator,
             openWindowSearch: { [weak self] in self?.windowSearch?.show() },
             openSettings: { [weak self] in self?.openSettings() }
         )
@@ -44,7 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         activity.start()
         Task { _ = await enumerator.allWindows() } // warm the cache
 
-        let tap = EventTap(rootSearch: .defaultRootSearch) { action in
+        let tap = EventTap(rootSearch: settings.rootHotkey) { action in
             MainActor.assumeIsolated {
                 (NSApp.delegate as? AppDelegate)?.perform(action)
             }
@@ -53,6 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             tap?.setSwitcherOpen(open)
         }
         windowSearch = WindowSearchController(enumerator: enumerator, activity: activity)
+        settings.onRootHotkeyChange = { [weak tap] combo in tap?.setRootSearch(combo) }
         if tap.start() {
             eventTap = tap
         } else {
@@ -128,8 +136,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc func openSettings() {
+        if settingsWindow == nil {
+            let window = NSWindow(
+                contentRect: .zero, styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            window.title = "Beam Settings"
+            window.isReleasedWhenClosed = false
+            window.contentView = NSHostingView(rootView: SettingsView(settings: settings, calculator: calculator))
+            window.center()
+            settingsWindow = window
+        }
         NSApp.activate()
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        settingsWindow?.makeKeyAndOrderFront(nil)
     }
 
     #if DEBUG

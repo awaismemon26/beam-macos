@@ -42,7 +42,7 @@ final class RootSearchModel {
 /// Option+Space: launch apps, run calculations, jump to window search.
 @MainActor
 final class RootSearchController {
-    let calculator = CalculatorService()
+    private let calculator: CalculatorService
     private let appIndex = AppIndex()
     private let usage = UsageStore()
     private let model = RootSearchModel()
@@ -54,7 +54,8 @@ final class RootSearchController {
     private var calcResult: CalculationResult?
     private static let rateRefreshInterval: Duration = .seconds(6 * 3600)
 
-    init(openWindowSearch: @escaping () -> Void, openSettings: @escaping () -> Void) {
+    init(calculator: CalculatorService, openWindowSearch: @escaping () -> Void, openSettings: @escaping () -> Void) {
+        self.calculator = calculator
         self.openWindowSearch = openWindowSearch
         self.openSettings = openSettings
         panel.host(RootSearchView(
