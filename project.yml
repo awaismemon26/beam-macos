@@ -1,0 +1,42 @@
+name: Beam
+options:
+  bundleIdPrefix: dev.beam
+  deploymentTarget:
+    macOS: "27.0"
+  createIntermediateGroups: true
+packages:
+  BeamKit:
+    path: Packages/BeamKit
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MACOSX_DEPLOYMENT_TARGET: "27.0"
+    BEAM_TEAM_ID: ""
+targets:
+  Beam:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+        excludes:
+          - Info.plist
+          - Beam.entitlements
+    dependencies:
+      - package: BeamKit
+        product: BeamCore
+      - package: BeamKit
+        product: BeamCalc
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.beam.Beam
+        PRODUCT_NAME: Beam
+        INFOPLIST_FILE: App/Info.plist
+        CODE_SIGN_ENTITLEMENTS: App/Beam.entitlements
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: $(BEAM_TEAM_ID)
+        ENABLE_HARDENED_RUNTIME: YES
+        GENERATE_INFOPLIST_FILE: NO
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        COMBINE_HIDPI_IMAGES: YES
