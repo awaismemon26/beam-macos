@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let activity = WindowActivityMonitor()
     private var eventTap: EventTap?
     private var switcher: SwitcherController?
+    private(set) var windowSearch: WindowSearchController?
     #if DEBUG
     private let focusMenu = NSMenu(title: "Focus window")
     #endif
@@ -45,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         switcher = SwitcherController(enumerator: enumerator, activity: activity) { [weak tap] open in
             tap?.setSwitcherOpen(open)
         }
+        windowSearch = WindowSearchController(enumerator: enumerator, activity: activity)
         if tap.start() {
             eventTap = tap
         } else {
@@ -56,7 +58,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         switch action {
         case let .switcher(key):
             switcher?.handle(key)
-        case .openWindowSearch, .toggleRootSearch, .pass, .swallow, .reenableTap:
+        case .openWindowSearch:
+            windowSearch?.show()
+        case .toggleRootSearch, .pass, .swallow, .reenableTap:
             break
         }
     }
