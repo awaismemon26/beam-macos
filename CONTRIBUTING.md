@@ -45,6 +45,11 @@ Tools/install.sh        # or: build, install into /Applications and launch
 
 ## Releasing (maintainers)
 
+One-time setup: run `Tools/make-signing-cert.sh` (it writes `~/BeamSigning/Beam.p12`, outside the repository) and add the
+two values it prints as repository secrets `BEAM_SIGNING_P12_BASE64` and `BEAM_SIGNING_P12_PASSWORD` (GitHub ▸ Settings ▸
+Secrets and variables ▸ Actions). Every release is then signed with the same self-made "Beam" certificate, so macOS keeps
+Accessibility across updates. Keep `Beam.p12` safe and never commit it; without the secrets the build is ad-hoc signed.
+
 1. Move the `[Unreleased]` notes in `CHANGELOG.md` under a new version heading.
 2. Tag and push: `git tag v1.1.0 && git push origin v1.1.0`.
 3. The **Release** workflow tests, builds a universal `Beam-<version>.zip` with a SHA-256 checksum and creates a
