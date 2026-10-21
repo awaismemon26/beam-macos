@@ -4,6 +4,8 @@
 
 # Beam
 
+*Every window, one keystroke away.*
+
 **Window switcher + productivity tool for macOS.**<br>
 Jump to any window, launch apps and calculate — instantly, from the keyboard.
 
@@ -39,6 +41,7 @@ Jump to any window, launch apps and calculate — instantly, from the keyboard.
   idles at ~0% CPU and ~45 MB of memory.
 - **Yours to tune.** Rebind the launcher hotkey, open at login, hide the menu-bar icon, follow the system
   appearance or pick light/dark.
+- **No account needed.** Install Beam and start using it. There is no sign-in and no telemetry.
 
 ## Install
 
@@ -113,11 +116,9 @@ Release history is in [CHANGELOG.md](CHANGELOG.md).
 
 ## Acknowledgements
 
-- The calculator is powered by [SoulverCore](https://github.com/soulverteam/SoulverCore), used under its licence.
 - Reaching windows on other Desktops follows the technique documented by
   [AltTab](https://github.com/lwouis/alt-tab-macos).
 
 ## License
 
-Beam is released under the [MIT License](LICENSE). SoulverCore is a separate, closed-source component with its
-own licence.
+Beam is released under the [MIT License](LICENSE).

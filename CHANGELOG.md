@@ -7,8 +7,7 @@ All notable changes to Beam are documented here. The format follows
 
 ## [1.0.0] - 2026-10-21
 
-The first release of Beam: a fast, native window switcher and launcher for macOS, built entirely in Swift,
-SwiftUI and AppKit, with no web views and no Electron.
+Every window, one keystroke away.
 
 ### Highlights
 
@@ -44,7 +43,7 @@ SwiftUI and AppKit, with no web views and no Electron.
 
 ### Calculator
 
-- Powered by SoulverCore: percentages (`5 % of 5000`), arithmetic, units (`65 kg in lb`), currencies
+- Understands percentages (`5 % of 5000`), arithmetic, units (`65 kg in lb`), currencies
   (`100 usd in eur`), time zones (`3pm london in tokyo`) and dates (`days until dec 25`).
 - The answer appears above the app results as you type; Enter copies it.
 - Ignores numbers that are just part of an app name, so `Things 3`, `Office 365` and `Xcode 16` launch the app
