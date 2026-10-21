@@ -36,9 +36,10 @@ public enum CalculatorGate {
         guard let resultNumber = plainNumber(value, locale: locale) else { return true }
         // A bare number echoed back (possibly reformatted, e.g. "5000" → "5,000") adds nothing.
         if plainNumber(trimmedInput, locale: locale) == resultNumber { return false }
-        // Without any operator, a number lifted out of words ("Things 3" → 3, "Office 365" → 365) is noise.
+        // Without any operator, the only number lifted out of words ("Things 3" → 3, "Office 365" → 365)
+        // is noise. With several numbers ("max of 3 and 5" → 5) the answer is real.
         if trimmedInput.rangeOfCharacter(from: echoOperatorCharacters) == nil,
-           numberTokens(trimmedInput, locale: locale).contains(resultNumber) {
+           numberTokens(trimmedInput, locale: locale) == [resultNumber] {
             return false
         }
         return true

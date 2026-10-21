@@ -29,4 +29,8 @@ import Testing
     @Test func arithmeticResultMatchingAnOperandStillShown() {
         #expect(CalculatorGate.shouldShow(input: "2 * 1", result: "2", locale: Locale(identifier: "en_US")))
     }
+
+    @Test func answerEqualToOneOfSeveralNumbersShown() {
+        #expect(CalculatorGate.shouldShow(input: "max of 3 and 5", result: "5", locale: Locale(identifier: "en_US")))
+    }
 }

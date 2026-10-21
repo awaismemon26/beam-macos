@@ -25,4 +25,10 @@ import Testing
         let german = CalculatorService(liveRates: false, locale: Locale(identifier: "de_DE"))
         #expect(await german.evaluate("100%") == nil)
     }
+
+    @Test(arguments: [("average of 2 and 4 and 6", "4"), ("gcd of 12 and 4", "4"), ("lcm of 3 and 6", "6"),
+                      ("max of 3 and 5", "5"), ("median of 1, 2, 3", "2")])
+    func answerEqualToAnInputIsShown(input: String, expected: String) async {
+        #expect(await calc.evaluate(input)?.value == expected)
+    }
 }
