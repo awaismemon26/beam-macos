@@ -22,15 +22,15 @@ enum SingleInstance {
                 NSWorkspace.shared.open(url)
             }
             return false
-        case let .replace(pid):
-            log.info("Replacing older Beam (pid \(pid))")
-            guard let old = others.first(where: { $0.processIdentifier == pid }) else { return true }
-            old.terminate()
+        case let .replace(pids):
+            log.info("Replacing older Beam copies (pids \(pids.map(String.init).joined(separator: ", "), privacy: .public))")
+            let old = others.filter { pids.contains($0.processIdentifier) }
+            old.forEach { $0.terminate() }
             let deadline = Date().addingTimeInterval(2)
-            while !old.isTerminated, Date() < deadline {
+            while old.contains(where: { !$0.isTerminated }), Date() < deadline {
                 RunLoop.current.run(until: Date().addingTimeInterval(0.05))
             }
-            if !old.isTerminated { log.error("Older Beam (pid \(pid)) did not quit in time") }
+            if old.contains(where: { !$0.isTerminated }) { log.error("An older Beam did not quit in time") }
             return true
         }
     }

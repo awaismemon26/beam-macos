@@ -35,17 +35,19 @@ public enum LaunchDecision: Equatable, Sendable {
     case proceed
     /// A better copy is running: ask it to show Settings, then quit.
     case handOff(to: Int32)
-    /// This copy is newer: quit the other one and take over.
-    case replace(Int32)
+    /// This copy is newer than these: quit all of them and take over.
+    case replace([Int32])
 
-    /// The newest version wins; for equal versions the lowest PID wins, so two simultaneous launches agree.
+    /// The newest version wins; for equal versions the lowest PID wins, so simultaneous launches agree.
+    /// A copy that loses to any other hands off; otherwise it replaces every strictly older copy. Equal
+    /// copies with a higher PID are left to hand off themselves.
     public static func decide(own: AppVersion, ownPID: Int32, others: [(pid: Int32, version: AppVersion)]) -> LaunchDecision {
-        let best = others.max { a, b in
-            a.version != b.version ? a.version < b.version : a.pid > b.pid
+        let winners = others.filter { $0.version > own || ($0.version == own && $0.pid < ownPID) }
+        if let winner = winners.max(by: { a, b in a.version != b.version ? a.version < b.version : a.pid > b.pid }) {
+            return .handOff(to: winner.pid)
         }
-        guard let best else { return .proceed }
-        if own != best.version { return own > best.version ? .replace(best.pid) : .handOff(to: best.pid) }
-        return ownPID < best.pid ? .proceed : .handOff(to: best.pid)
+        let older = others.filter { $0.version < own }.map(\.pid)
+        return older.isEmpty ? .proceed : .replace(older)
     }
 }
 

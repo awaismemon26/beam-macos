@@ -9,7 +9,7 @@ import Testing
     }
     @Test func olderRunningIsReplaced() {
         let d = LaunchDecision.decide(own: v("1.1.0"), ownPID: 90, others: [(pid: 50, version: v("1.0.0"))])
-        #expect(d == .replace(50))
+        #expect(d == .replace([50]))
     }
     @Test func newerRunningGetsHandOff() {
         let d = LaunchDecision.decide(own: v("1.0.0"), ownPID: 50, others: [(pid: 90, version: v("1.1.0"))])
@@ -25,11 +25,26 @@ import Testing
     }
     @Test func buildBreaksTie() {
         let d = LaunchDecision.decide(own: v("1.1.0", "5"), ownPID: 90, others: [(pid: 50, version: v("1.1.0", "4"))])
-        #expect(d == .replace(50))
+        #expect(d == .replace([50]))
     }
     @Test func comparedAgainstTheBestOfSeveralOthers() {
         let others = [(pid: Int32(20), version: v("1.0.0")), (pid: Int32(30), version: v("1.2.0")), (pid: Int32(40), version: v("1.1.0"))]
         #expect(LaunchDecision.decide(own: v("1.1.0"), ownPID: 50, others: others) == .handOff(to: 30))
+    }
+    @Test func twoOlderCopiesAreBothReplaced() {
+        let others = [(pid: Int32(10), version: v("1.0.0")), (pid: Int32(20), version: v("1.0.0"))]
+        guard case let .replace(pids) = LaunchDecision.decide(own: v("1.1.0"), ownPID: 90, others: others) else {
+            Issue.record("expected .replace"); return
+        }
+        #expect(Set(pids) == [10, 20])
+    }
+    @Test func olderAndEqualHigherPID() {
+        let others = [(pid: Int32(50), version: v("1.0.0")), (pid: Int32(95), version: v("1.1.0"))]
+        #expect(LaunchDecision.decide(own: v("1.1.0"), ownPID: 90, others: others) == .replace([50]))
+    }
+    @Test func olderAndEqualLowerPIDHandsOff() {
+        let others = [(pid: Int32(50), version: v("1.0.0")), (pid: Int32(90), version: v("1.1.0"))]
+        #expect(LaunchDecision.decide(own: v("1.1.0"), ownPID: 95, others: others) == .handOff(to: 90))
     }
     @Test func versionsCompareNumerically() {
         #expect(v("1.10.0") > v("1.9.9"))
