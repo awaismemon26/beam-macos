@@ -19,16 +19,16 @@ enum AppearanceMode: String, CaseIterable, Sendable {
 /// User preferences persisted in UserDefaults.
 @MainActor @Observable
 final class AppSettings {
-    private static let rootHotkeyKey = "rootSearchHotkey"
+    private static let shortcutsKey = "shortcuts"
+    /// 1.0 stored only the launcher combo; read once to migrate, then left in place.
+    private static let legacyRootHotkeyKey = "rootSearchHotkey"
     private static let showInMenuBarKey = "showInMenuBar"
     private static let appearanceKey = "appearance"
 
-    var rootHotkey: KeyCombo {
+    var shortcuts: ShortcutBindings {
         didSet {
-            if let data = try? JSONEncoder().encode(rootHotkey) {
-                UserDefaults.standard.set(data, forKey: Self.rootHotkeyKey)
-            }
-            onRootHotkeyChange?(rootHotkey)
+            Self.save(shortcuts)
+            onShortcutsChange?(shortcuts)
         }
     }
 
@@ -46,18 +46,13 @@ final class AppSettings {
         }
     }
 
-    /// Called with the combo the event tap should use (a disabled combo while recording a new one).
-    var onRootHotkeyChange: ((KeyCombo) -> Void)?
+    /// Called with the bindings the event tap should use (`.disabled` while recording a new one).
+    var onShortcutsChange: ((ShortcutBindings) -> Void)?
     var onShowInMenuBarChange: ((Bool) -> Void)?
 
     init() {
         let defaults = UserDefaults.standard
-        if let data = defaults.data(forKey: Self.rootHotkeyKey),
-           let combo = try? JSONDecoder().decode(KeyCombo.self, from: data) {
-            rootHotkey = combo
-        } else {
-            rootHotkey = .defaultRootSearch
-        }
+        shortcuts = Self.loadShortcuts(defaults)
         showInMenuBar = defaults.object(forKey: Self.showInMenuBarKey) as? Bool ?? true
         appearance = defaults.string(forKey: Self.appearanceKey).flatMap(AppearanceMode.init) ?? .system
     }
@@ -67,8 +62,28 @@ final class AppSettings {
         NSApp.appearance = appearance.nsAppearance
     }
 
-    /// While the recorder listens, the old hotkey must not open Beam.
+    /// While the recorder listens, no shortcut may fire.
     func setRecording(_ recording: Bool) {
-        onRootHotkeyChange?(recording ? KeyCombo(keyCode: .max, modifiers: []) : rootHotkey)
+        onShortcutsChange?(recording ? .disabled : shortcuts)
+    }
+
+    private static func loadShortcuts(_ defaults: UserDefaults) -> ShortcutBindings {
+        if let data = defaults.data(forKey: shortcutsKey),
+           let bindings = try? JSONDecoder().decode(ShortcutBindings.self, from: data) {
+            return bindings
+        }
+        var bindings = ShortcutBindings.defaults
+        if let data = defaults.data(forKey: legacyRootHotkeyKey),
+           let combo = try? JSONDecoder().decode(KeyCombo.self, from: data) {
+            bindings.launcher = combo
+            save(bindings)
+        }
+        return bindings
+    }
+
+    private static func save(_ bindings: ShortcutBindings) {
+        if let data = try? JSONEncoder().encode(bindings) {
+            UserDefaults.standard.set(data, forKey: shortcutsKey)
+        }
     }
 }

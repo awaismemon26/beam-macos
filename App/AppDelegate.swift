@@ -61,7 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Task { _ = await enumerator.allWindows() } // warm the cache
 
         // Capture self directly: under @NSApplicationDelegateAdaptor, NSApp.delegate is SwiftUI's own object.
-        let tap = EventTap(rootSearch: settings.rootHotkey) { [weak self] action in
+        let tap = EventTap(bindings: settings.shortcuts) { [weak self] action in
             MainActor.assumeIsolated {
                 self?.perform(action)
             }
@@ -70,7 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             tap?.setSwitcherOpen(open)
         }
         windowSearch = WindowSearchController(enumerator: enumerator, activity: activity)
-        settings.onRootHotkeyChange = { [weak tap] combo in tap?.setRootSearch(combo) }
+        settings.onShortcutsChange = { [weak tap] bindings in tap?.setBindings(bindings) }
         if tap.start() {
             eventTap = tap
         } else {
@@ -86,6 +86,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             windowSearch?.show()
         case .toggleRootSearch:
             rootSearch?.toggle()
+        case .openSearchFiles:
+            rootSearch?.show() // until file search lands
+        case .openSettings:
+            openSettings()
         case .pass, .swallow, .reenableTap:
             break
         }

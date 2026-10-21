@@ -11,7 +11,7 @@ struct HotkeyRecorder: View {
     var body: some View {
         HStack(spacing: 6) {
             Button { isRecording ? stop() : start() } label: {
-                Text(isRecording ? "Press keys…" : settings.rootHotkey.displayString)
+                Text(isRecording ? "Press keys…" : settings.shortcuts.launcher?.displayString ?? "None")
                     .font(.system(size: 12, weight: .medium))
                     .padding(.horizontal, 10)
                     .frame(minWidth: 80, minHeight: 24)
@@ -26,14 +26,14 @@ struct HotkeyRecorder: View {
             }
             .buttonStyle(.plain)
             .help("Click, then press a new shortcut. Esc cancels.")
-            Button { settings.rootHotkey = .defaultRootSearch } label: {
+            Button { settings.shortcuts.launcher = ShortcutBindings.defaults.launcher } label: {
                 Image(systemName: "arrow.counterclockwise")
                     .font(.system(size: 11, weight: .semibold))
                     .frame(width: 24, height: 24)
                     .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.primary.opacity(0.08)))
             }
             .buttonStyle(.plain)
-            .disabled(settings.rootHotkey == .defaultRootSearch)
+            .disabled(settings.shortcuts.launcher == ShortcutBindings.defaults.launcher)
             .help("Reset to ⌥ Space")
         }
         .overlay(alignment: .bottomTrailing) {
@@ -45,7 +45,7 @@ struct HotkeyRecorder: View {
     }
 
     private var warning: String? {
-        switch settings.rootHotkey {
+        switch settings.shortcuts.launcher {
         case KeyCombo(keyCode: KeyCode.tab, modifiers: .control): "Ctrl+Tab is already the window switcher."
         case KeyCombo(keyCode: KeyCode.tab, modifiers: .option): "Option+Tab is already window search."
         default: nil
@@ -62,7 +62,7 @@ struct HotkeyRecorder: View {
             }
             let modifiers = EventTap.modifiers(CGEventFlags(rawValue: UInt64(event.modifierFlags.rawValue)))
             guard !modifiers.subtracting(.shift).isEmpty else { return nil }
-            settings.rootHotkey = KeyCombo(keyCode: event.keyCode, modifiers: modifiers)
+            settings.shortcuts.launcher = KeyCombo(keyCode: event.keyCode, modifiers: modifiers)
             stop()
             return nil
         }
