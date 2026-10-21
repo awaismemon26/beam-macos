@@ -25,7 +25,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     #endif
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        settings.applyAppearance()
         installStatusItem()
+        settings.onShowInMenuBarChange = { [weak self] visible in self?.statusItem?.isVisible = visible }
         // Launcher + calculator need no permission; window features start once Accessibility is granted.
         LoginItem.applyDefaultOnce()
         rootSearch = RootSearchController(
@@ -132,7 +134,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(NSMenuItem(title: "Quit Beam", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
 
         item.menu = menu
+        item.isVisible = self.settings.showInMenuBar
         statusItem = item
+    }
+
+    /// Opening Beam again (Spotlight, Finder, Dock) shows Settings — the way back when the menu-bar
+    /// icon is hidden.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        openSettings()
+        return false
     }
 
     @objc private func openBeam() {
@@ -142,10 +152,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc func openSettings() {
         if settingsWindow == nil {
             let window = NSWindow(
-                contentRect: .zero, styleMask: [.titled, .closable], backing: .buffered, defer: false)
+                contentRect: NSRect(origin: .zero, size: SettingsView.size),
+                styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
+                backing: .buffered, defer: false)
             window.title = "Beam Settings"
+            window.titleVisibility = .hidden
+            window.titlebarAppearsTransparent = true
+            window.isMovableByWindowBackground = true
             window.isReleasedWhenClosed = false
-            window.contentView = NSHostingView(rootView: SettingsView(settings: settings, calculator: calculator))
+            let calculator = calculator
+            let rates = RatesStatus(
+                lastUpdate: { await calculator.lastRatesUpdate },
+                refresh: { await calculator.refreshRates() }
+            )
+            window.contentView = NSHostingView(rootView: SettingsView(settings: settings, rates: rates))
             window.center()
             // Drop the content on close so its views disappear: that ends hotkey recording and status polling.
             settingsCloseToken = NotificationCenter.default.addObserver(

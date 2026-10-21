@@ -9,14 +9,36 @@ struct HotkeyRecorder: View {
     @State private var monitor: Any?
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 4) {
-            Button(isRecording ? "Press shortcut…" : settings.rootHotkey.displayString) {
-                isRecording ? stop() : start()
+        HStack(spacing: 6) {
+            Button { isRecording ? stop() : start() } label: {
+                Text(isRecording ? "Press keys…" : settings.rootHotkey.displayString)
+                    .font(.system(size: 12, weight: .medium))
+                    .padding(.horizontal, 10)
+                    .frame(minWidth: 80, minHeight: 24)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(isRecording ? Color.accentColor.opacity(0.2) : Color.primary.opacity(0.08))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .strokeBorder(isRecording ? Color.accentColor : .clear)
+                    )
             }
-            .buttonStyle(.bordered)
-            .frame(minWidth: 120)
+            .buttonStyle(.plain)
+            .help("Click, then press a new shortcut. Esc cancels.")
+            Button { settings.rootHotkey = .defaultRootSearch } label: {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 11, weight: .semibold))
+                    .frame(width: 24, height: 24)
+                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.primary.opacity(0.08)))
+            }
+            .buttonStyle(.plain)
+            .disabled(settings.rootHotkey == .defaultRootSearch)
+            .help("Reset to ⌥ Space")
+        }
+        .overlay(alignment: .bottomTrailing) {
             if let warning {
-                Text(warning).font(.caption).foregroundStyle(.orange)
+                Text(warning).font(.caption).foregroundStyle(.orange).fixedSize().offset(y: 18)
             }
         }
         .onDisappear { stop() }
@@ -61,7 +83,7 @@ extension KeyCombo {
         if modifiers.contains(.option) { s += "⌥" }
         if modifiers.contains(.shift) { s += "⇧" }
         if modifiers.contains(.command) { s += "⌘" }
-        return s + Self.keyName(keyCode)
+        return s + " " + Self.keyName(keyCode)
     }
 
     /// Names for the ANSI key codes people use in shortcuts.

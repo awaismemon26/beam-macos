@@ -92,9 +92,12 @@ Setup: open **3 Chrome windows** (minimize one with ⌘M; move one to **Desktop 
 - [ ] Option+Space again (or Esc) hides the panel.
 
 **Settings**
-- [ ] Rebind "Open Beam" to Ctrl+Space. Option+Space no longer opens Beam, Ctrl+Space does, and the change survives a relaunch.
-- [ ] The launch-at-login toggle matches System Settings ▸ General ▸ Login Items.
-- [ ] Calculator ▸ Refresh now updates the "Updated…" time.
+- [ ] Settings has a General and an About pane (sidebar), in the style of Raycast's settings.
+- [ ] Rebind "Beam Hotkey" to Ctrl+Space. Option+Space no longer opens Beam, Ctrl+Space does, and the change survives a relaunch. ↺ resets it to ⌥ Space.
+- [ ] "Open at Login" matches System Settings ▸ General ▸ Login Items, and Beam starts after logging in.
+- [ ] "Show in Menu Bar" off hides the icon; opening Beam again (Spotlight/Finder) or ⌘, in Beam opens Settings.
+- [ ] "Follow System Appearance" off shows Light/Dark; panels and Settings switch immediately.
+- [ ] About ▸ Currency Rates ▸ Refresh updates the "Updated…" time.
 
 **Robustness**
 - [ ] With a hung app (beachball), Ctrl+Tab and Option+Tab still open instantly. The hung app's windows may be missing.
