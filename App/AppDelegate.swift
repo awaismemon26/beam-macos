@@ -101,8 +101,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         })
         window.center()
         onboardingWindow = window
-        NSApp.activate()
-        window.makeKeyAndOrderFront(nil)
+        bringToFront(window)
     }
 
     private func installStatusItem() {
@@ -181,8 +180,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             settingsWindow = window
         }
+        bringToFront(settingsWindow)
+    }
+
+    /// Beam has no Dock icon and its panels don't activate it, so macOS may decline `NSApp.activate()`.
+    /// Put the window on top regardless, ask politely, and force activation only if that was declined,
+    /// so the window also gets keyboard focus.
+    private func bringToFront(_ window: NSWindow?) {
+        guard let window else { return }
+        window.orderFrontRegardless()
+        window.makeKey()
         NSApp.activate()
-        settingsWindow?.makeKeyAndOrderFront(nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            MainActor.assumeIsolated {
+                guard !NSApp.isActive, window.isVisible else { return }
+                log.info("Activation declined; forcing")
+                (NSApp as LegacyActivation).activate(ignoringOtherApps: true)
+                window.makeKeyAndOrderFront(nil)
+            }
+        }
     }
 
     #if DEBUG
@@ -227,3 +243,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     #endif
 }
+
+/// `NSApplication.activate(ignoringOtherApps:)`, deprecated since macOS 14 but still the only call that
+/// brings an accessory (no Dock icon) app's window to the front with keyboard focus.
+@MainActor private protocol LegacyActivation {
+    func activate(ignoringOtherApps flag: Bool)
+}
+
+extension NSApplication: LegacyActivation {}
