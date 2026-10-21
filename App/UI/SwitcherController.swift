@@ -11,8 +11,8 @@ final class SwitcherModel {
     var shakes = 0
 }
 
-/// The Ctrl+Tab panel: all windows of the frontmost app, MRU order. Releasing Control closes without
-/// switching; Enter focuses the highlighted window.
+/// The Ctrl+Tab panel: all windows of the frontmost app, MRU order. Releasing Control (or Enter)
+/// focuses the highlighted window; Esc closes without switching.
 @MainActor
 final class SwitcherController {
     /// How long to wait for a fresh enumeration before showing cached data.
@@ -92,6 +92,16 @@ final class SwitcherController {
         case let .focus(index):
             guard model.windows.indices.contains(index) else { return }
             focus(model.windows[index])
+        case let .commit(index):
+            // The tap already marked the switcher closed when Control went up.
+            panel.dismiss()
+            guard model.windows.indices.contains(index) else { return }
+            let window = model.windows[index]
+            guard window.isReachable else { return }
+            Task {
+                let element = enumerator.axElement(for: window.id)
+                if await WindowFocuser.focus(window, element: element) == .focused { activity.touch(window.id) }
+            }
         case .close:
             // Esc / Control release were already tracked by the tap; telling it again here could
             // overwrite a newer Ctrl+Tab the tap has seen but this queue hasn't handled yet.

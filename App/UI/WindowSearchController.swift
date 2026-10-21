@@ -10,12 +10,14 @@ final class WindowSearchModel {
     var selection = 0
     var shakes = 0
     var presentCount = 0
-    private var icons: [pid_t: NSImage] = [:]
+    /// Filled while rows render, so it must not be observed (a write would re-render, forever when an
+    /// app has no icon). Misses are cached too.
+    @ObservationIgnored private var icons: [pid_t: NSImage?] = [:]
 
     func icon(for pid: pid_t) -> NSImage? {
-        if let icon = icons[pid] { return icon }
+        if let cached = icons[pid] { return cached }
         let icon = NSRunningApplication(processIdentifier: pid)?.icon
-        icons[pid] = icon
+        icons[pid] = .some(icon)
         return icon
     }
 

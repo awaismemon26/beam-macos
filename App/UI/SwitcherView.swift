@@ -26,7 +26,7 @@ struct SwitcherView: View {
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
             Spacer()
-            Text("⌃⇥ next · ⏎ open · release ⌃ to cancel")
+            Text("⌃⇥ next · release ⌃ to switch · esc cancel")
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
         }
@@ -48,7 +48,9 @@ struct SwitcherView: View {
                 ScrollView(.vertical, showsIndicators: false) { rows }
                     .frame(height: Theme.rowHeight * CGFloat(Theme.maxVisibleSwitcherRows))
                     .onChange(of: model.highlighted) { _, index in
-                        proxy.scrollTo(index, anchor: .center)
+                        if model.windows.indices.contains(index) {
+                            proxy.scrollTo(model.windows[index].id, anchor: .center)
+                        }
                     }
             }
         }
@@ -58,7 +60,7 @@ struct SwitcherView: View {
         VStack(spacing: 0) {
             ForEach(Array(model.windows.enumerated()), id: \.element.id) { index, window in
                 WindowRow(window: window, icon: nil, isSelected: index == model.highlighted)
-                    .id(index)
+                    .id(window.id) // must match ForEach's identity, or rows show stale windows
             }
         }
     }

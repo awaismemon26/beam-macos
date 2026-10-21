@@ -34,14 +34,16 @@ struct RootSearchView: View {
                     }
                     ForEach(Array(model.items.enumerated()), id: \.element.id) { index, item in
                         row(item, isSelected: index == model.selection)
-                            .id(index)
+                            .id(item.id) // must match ForEach's identity, or rows show stale items
                             .onTapGesture { onActivate(index) }
                     }
                 }
                 .padding(6)
             }
             .scrollIndicators(.never)
-            .onChange(of: model.selection) { _, index in proxy.scrollTo(index) }
+            .onChange(of: model.selection) { _, index in
+                if model.items.indices.contains(index) { proxy.scrollTo(model.items[index].id) }
+            }
         }
     }
 

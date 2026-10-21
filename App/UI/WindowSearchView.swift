@@ -40,14 +40,16 @@ struct WindowSearchView: View {
                         ForEach(Array(model.results.enumerated()), id: \.element.id) { index, window in
                             WindowRow(window: window, icon: model.icon(for: window.pid),
                                       isSelected: index == model.selection, showsAppName: true)
-                                .id(index)
+                                .id(window.id) // must match ForEach's identity, or rows show stale windows
                                 .onTapGesture { onActivate(index) }
                         }
                     }
                     .padding(6)
                 }
                 .scrollIndicators(.never)
-                .onChange(of: model.selection) { _, index in proxy.scrollTo(index) }
+                .onChange(of: model.selection) { _, index in
+                    if model.results.indices.contains(index) { proxy.scrollTo(model.results[index].id) }
+                }
             }
         }
     }

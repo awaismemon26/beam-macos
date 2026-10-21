@@ -1,10 +1,13 @@
 /// What the switcher UI should do in response to a key.
 public enum SwitcherCommand: Equatable, Sendable {
     case open(highlight: Int), move(to: Int), focus(index: Int), close, none
+    /// Close the panel and focus this row (Control was released, like Cmd+Tab).
+    case commit(index: Int)
 }
 
-/// State of the Ctrl+Tab panel. Releasing Control closes without switching; Enter focuses.
-/// The machine does not close on `.focus` — the controller closes it after a successful focus.
+/// State of the Ctrl+Tab panel. Releasing Control switches to the highlighted window; Esc cancels;
+/// Enter focuses without waiting for the release. The machine does not close on `.focus` — the
+/// controller closes it after a successful focus.
 public struct SwitcherStateMachine: Sendable {
     public private(set) var isOpen = false
     public private(set) var highlighted = 0
@@ -27,10 +30,15 @@ public struct SwitcherStateMachine: Sendable {
             return .move(to: highlighted)
         case .enter:
             return itemCount > 0 ? .focus(index: min(highlighted, itemCount - 1)) : .none
-        case .escape, .controlReleased:
+        case .escape:
             isOpen = false
             highlighted = 0
             return .close
+        case .controlReleased:
+            let index = min(highlighted, itemCount - 1)
+            isOpen = false
+            highlighted = 0
+            return itemCount > 0 ? .commit(index: index) : .close
         }
     }
 

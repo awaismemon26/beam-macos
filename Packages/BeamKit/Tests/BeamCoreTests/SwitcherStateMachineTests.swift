@@ -39,10 +39,10 @@ import Testing
         #expect(s.handle(.enter, itemCount: 0) == .none)
         #expect(s.handle(.tab(shift: false), itemCount: 0) == .none)
     }
-    @Test func controlReleaseCloses() {
+    @Test func controlReleaseCommitsHighlighted() {
         var s = SwitcherStateMachine()
         _ = s.handle(.tab(shift: false), itemCount: 3)
-        #expect(s.handle(.controlReleased, itemCount: 3) == .close)
+        #expect(s.handle(.controlReleased, itemCount: 3) == .commit(index: 1))
         #expect(!s.isOpen)
     }
     @Test func escapeCloses() {
@@ -71,5 +71,24 @@ import Testing
         var s = SwitcherStateMachine()
         _ = s.handle(.tab(shift: true), itemCount: 0)
         #expect(s.resetHighlight(itemCount: 3) == 2)
+    }
+
+    @Test func releaseAfterMovingCommitsHighlighted() {
+        var s = SwitcherStateMachine()
+        _ = s.handle(.tab(shift: false), itemCount: 3)
+        _ = s.handle(.tab(shift: false), itemCount: 3)
+        #expect(s.handle(.controlReleased, itemCount: 3) == .commit(index: 2))
+    }
+    @Test func releaseWithNoWindowsJustCloses() {
+        var s = SwitcherStateMachine()
+        _ = s.handle(.tab(shift: false), itemCount: 0)
+        #expect(s.handle(.controlReleased, itemCount: 0) == .close)
+        #expect(!s.isOpen)
+    }
+    @Test func releaseAfterEscapeDoesNothing() {
+        var s = SwitcherStateMachine()
+        _ = s.handle(.tab(shift: false), itemCount: 3)
+        _ = s.handle(.escape, itemCount: 3)
+        #expect(s.handle(.controlReleased, itemCount: 3) == .none)
     }
 }

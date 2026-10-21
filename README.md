@@ -36,6 +36,12 @@ Core-logic tests:
 cd Packages/BeamKit && swift test
 ```
 
+Window-search rendering check (draws the real Option+Tab view offscreen and reads the rows back):
+
+```bash
+Tools/RenderCheck/run.sh
+```
+
 ## First run
 
 1. Beam shows a welcome window asking for **Accessibility** access. Click *Open System Settings* and turn
@@ -56,16 +62,16 @@ Setup: open **3 Chrome windows** (minimize one with ⌘M; move one to **Desktop 
 
 **Ctrl+Tab: windows of the current app**
 - [ ] In VS Code, Ctrl+Tab shows both VS Code windows, with the *second* one highlighted. VS Code does **not** switch editor tabs.
-- [ ] Holding Control: Tab moves down (wraps), Shift+Tab moves up, and Enter jumps to that exact window and closes the panel.
-- [ ] Ctrl+Tab, then releasing Control, closes the panel and nothing changes. Esc also closes it.
+- [ ] Holding Control: Tab moves down (wraps), Shift+Tab moves up. Releasing Control (or Enter) jumps to the highlighted window.
+- [ ] A single quick Ctrl+Tab flips to the previous window. Ctrl+Tab, then Esc, closes the panel and nothing changes.
 - [ ] In Chrome, the Desktop 2 window says "Desktop 2", and Enter on it switches to Desktop 2 with that window in front.
 - [ ] The minimized window says "Minimized", and Enter on it restores it.
-- [ ] Quick flip: Ctrl+Tab, Enter, Ctrl+Tab, Enter returns you to the first window.
+- [ ] Quick flip: Ctrl+Tab twice (releasing in between) returns you to the first window.
 - [ ] Typing elsewhere, Cmd+Tab and Ctrl+arrows still behave normally.
 
 **Option+Tab: window search**
 - [ ] Option+Tab opens a search panel listing every window. It doesn't type a tab or a special character in the app behind it.
-- [ ] "chrome" shows all 3 Chrome windows, "vscode" shows both VS Code windows, and "jira" finds a Chrome tab titled Jira.
+- [ ] "chrome" shows exactly the 3 Chrome windows (the rows, not just the count), "vscode" shows both VS Code windows, and "jira" finds a Chrome tab titled Jira.
 - [ ] ↑↓ / Tab move, Enter focuses, Esc or clicking elsewhere closes.
 
 **Option+Space: launcher + calculator**
