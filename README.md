@@ -12,11 +12,12 @@ A fast, native macOS launcher (Swift 6, SwiftUI + AppKit, no web views):
 xcodegen generate
 ```
 
-Signed with your Apple Development team (keeps the Accessibility permission across rebuilds). Find the
-Team ID in Xcode ▸ Settings ▸ Accounts ▸ your team:
+Signed with the Apple Development team set in `project.yml` (`BEAM_TEAM_ID`), which
+keeps the Accessibility permission across rebuilds. Needs that team's Apple Development certificate in the
+keychain, plus Apple's [WWDR G3 intermediate](https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer):
 
 ```bash
-xcodebuild -project Beam.xcodeproj -scheme Beam -configuration Release -derivedDataPath build BEAM_TEAM_ID=<TEAM_ID> -allowProvisioningUpdates build
+xcodebuild -project Beam.xcodeproj -scheme Beam -configuration Release -derivedDataPath build -allowProvisioningUpdates build
 ```
 
 Without a team (ad-hoc). Hardened runtime must be off, or macOS refuses to load SoulverCore. macOS also
