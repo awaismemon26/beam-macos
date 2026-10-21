@@ -7,13 +7,13 @@
 **Window switcher + productivity tool for macOS.**<br>
 Jump to any window, launch apps and calculate — instantly, from the keyboard.
 
-[![Latest release](https://img.shields.io/github/v/release/awaismemon26/beam?label=release&color=7b5cff)](https://github.com/awaismemon26/beam/releases/latest)
-[![CI](https://github.com/awaismemon26/beam/actions/workflows/ci.yml/badge.svg)](https://github.com/awaismemon26/beam/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/awaismemon26/beam-macos?label=release&color=7b5cff)](https://github.com/awaismemon26/beam-macos/releases/latest)
+[![CI](https://github.com/awaismemon26/beam-macos/actions/workflows/ci.yml/badge.svg)](https://github.com/awaismemon26/beam-macos/actions/workflows/ci.yml)
 [![macOS 15+](https://img.shields.io/badge/macOS-15%2B-000000?logo=apple&logoColor=white)](#install)
 [![Swift 6](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](https://www.swift.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-[**Download**](https://github.com/awaismemon26/beam/releases/latest) ·
+[**Download**](https://github.com/awaismemon26/beam-macos/releases/latest) ·
 [Features](#features) ·
 [Install](#install) ·
 [Shortcuts](#shortcuts) ·
@@ -42,7 +42,7 @@ Jump to any window, launch apps and calculate — instantly, from the keyboard.
 
 ## Install
 
-1. Download **`Beam-<version>.zip`** from the [latest release](https://github.com/awaismemon26/beam/releases/latest)
+1. Download **`Beam-<version>.zip`** from the [latest release](https://github.com/awaismemon26/beam-macos/releases/latest)
    and unzip it.
 2. Drag **Beam.app** into **Applications**.
 3. Open Beam. It isn't notarized by Apple yet, so the first time macOS says it can't verify the app:
@@ -77,8 +77,8 @@ Jump to any window, launch apps and calculate — instantly, from the keyboard.
 Requirements: Xcode 26 or later and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
 
 ```bash
-git clone https://github.com/awaismemon26/beam.git
-cd beam
+git clone https://github.com/awaismemon26/beam-macos.git
+cd beam-macos
 cp .env.example .env     # optional: set BEAM_TEAM_ID to your Apple Development team
 Tools/install.sh         # builds, installs into /Applications and launches Beam
 ```

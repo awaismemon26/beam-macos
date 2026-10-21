@@ -179,7 +179,7 @@ private struct AboutSettings: View {
     @State private var ratesUpdated: Date?
     @State private var refreshing = false
 
-    private static let repositoryURL = URL(string: "https://github.com/awaismemon26/beam")!
+    private static let repositoryURL = URL(string: "https://github.com/awaismemon26/beam-macos")!
     private static let soulverURL = URL(string: "https://soulver.app/core")!
 
     var body: some View {

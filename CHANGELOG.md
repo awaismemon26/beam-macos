@@ -85,5 +85,5 @@ SwiftUI and AppKit, with no web views and no Electron.
   drafts the release.
 - Build from source with `Tools/install.sh`; an optional `.env` holds your signing team.
 
-[Unreleased]: https://github.com/awaismemon26/beam/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/awaismemon26/beam/releases/tag/v1.0.0
+[Unreleased]: https://github.com/awaismemon26/beam-macos/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/awaismemon26/beam-macos/releases/tag/v1.0.0
