@@ -104,33 +104,40 @@ public struct HotkeyClassifier: Sendable {
         }
     }
 
+    /// The binding for `action` unless it is unusable (see `ShortcutBindings.sanitized`).
+    private func combo(_ action: ShortcutAction) -> KeyCombo? {
+        bindings[action].flatMap { $0.isUsable(for: action) ? $0 : nil }
+    }
+
     /// The switcher stays open while every one of its modifiers is held. Unbound, it never stays open.
     private func holdsSwitcherModifiers(_ mods: KeyModifiers) -> Bool {
-        guard let switcher = bindings.switcher else { return false }
+        guard let switcher = combo(.switcher) else { return false }
         return mods.isSuperset(of: switcher.modifiers)
     }
 
     private func classifyKeyDown(keyCode: UInt16, mods: KeyModifiers, isRepeat: Bool) -> HotkeyAction {
+        let switcher = combo(.switcher)
         // The switcher and window search answer with or without ⇧; the others need their exact modifiers.
-        if let switcher = bindings.switcher, keyCode == switcher.keyCode, mods.subtracting(.shift) == switcher.modifiers {
+        if let switcher, keyCode == switcher.keyCode, mods.subtracting(.shift) == switcher.modifiers {
             return .switcher(.tab(shift: mods.contains(.shift)))
         }
-        if let search = bindings.windowSearch, keyCode == search.keyCode,
-           mods == search.modifiers || mods == search.modifiers.union(.shift) {
-            return isRepeat ? .swallow : .openWindowSearch
-        }
-        let exact: [(KeyCombo?, HotkeyAction)] = [
-            (bindings.launcher, .toggleRootSearch), (bindings.searchFiles, .openSearchFiles), (bindings.settings, .openSettings),
-        ]
-        for case let (combo?, action) in exact where keyCode == combo.keyCode && mods == combo.modifiers {
-            return isRepeat ? .swallow : action
-        }
+        // While the switcher is open nothing else may fire: only Return, Escape and its own key count.
         if isSwitcherOpen {
             switch keyCode {
             case KeyCode.returnKey, KeyCode.keypadEnter: return .switcher(.enter)
             case KeyCode.escape: return .switcher(.escape)
             default: return .swallow
             }
+        }
+        if let search = combo(.windowSearch), keyCode == search.keyCode,
+           mods == search.modifiers || mods == search.modifiers.union(.shift) {
+            return isRepeat ? .swallow : .openWindowSearch
+        }
+        let exact: [(KeyCombo?, HotkeyAction)] = [
+            (combo(.launcher), .toggleRootSearch), (combo(.searchFiles), .openSearchFiles), (combo(.settings), .openSettings),
+        ]
+        for case let (combo?, action) in exact where keyCode == combo.keyCode && mods == combo.modifiers {
+            return isRepeat ? .swallow : action
         }
         return .pass
     }

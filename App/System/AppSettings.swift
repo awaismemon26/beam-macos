@@ -70,12 +70,13 @@ final class AppSettings {
     private static func loadShortcuts(_ defaults: UserDefaults) -> ShortcutBindings {
         if let data = defaults.data(forKey: shortcutsKey),
            let bindings = try? JSONDecoder().decode(ShortcutBindings.self, from: data) {
-            return bindings
+            return bindings.sanitized
         }
         var bindings = ShortcutBindings.defaults
         if let data = defaults.data(forKey: legacyRootHotkeyKey),
            let combo = try? JSONDecoder().decode(KeyCombo.self, from: data) {
             bindings.launcher = combo
+            bindings = bindings.sanitized
             save(bindings)
         }
         return bindings

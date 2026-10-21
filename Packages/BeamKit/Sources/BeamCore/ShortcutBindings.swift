@@ -33,6 +33,16 @@ public struct ShortcutBindings: Codable, Equatable, Sendable {
     /// Nothing bound: used while a recorder listens, so no shortcut fires.
     public static let disabled = ShortcutBindings()
 
+    /// These bindings with every unusable one removed: a combo with none of ⌃ ⌥ ⌘ would hijack plain typing,
+    /// and the switcher can't use the keys it already answers while open.
+    public var sanitized: ShortcutBindings {
+        var clean = self
+        for action in ShortcutAction.allCases {
+            if let combo = self[action], !combo.isUsable(for: action) { clean[action] = nil }
+        }
+        return clean
+    }
+
     public subscript(action: ShortcutAction) -> KeyCombo? {
         get {
             switch action {
@@ -55,11 +65,28 @@ public struct ShortcutBindings: Codable, Equatable, Sendable {
     }
 }
 
+extension KeyCombo {
+    /// Holds at least one of ⌃ ⌥ ⌘.
+    var hasRequiredModifier: Bool { !modifiers.isDisjoint(with: [.control, .option, .command]) }
+
+    /// The switcher's own Return, keypad Enter and Escape are fixed while it is open.
+    static func isSwitcherReserved(_ keyCode: UInt16) -> Bool {
+        keyCode == KeyCode.returnKey || keyCode == KeyCode.keypadEnter || keyCode == KeyCode.escape
+    }
+
+    /// Whether the classifier may match `action` against this combo.
+    func isUsable(for action: ShortcutAction) -> Bool {
+        hasRequiredModifier && !(action == .switcher && Self.isSwitcherReserved(keyCode))
+    }
+}
+
 public enum ShortcutIssue: Equatable, Sendable {
     /// None of ⌃ ⌥ ⌘ held.
     case needsModifier
     /// ⇧ + the switcher's key moves backwards, so ⇧ can't be one of its modifiers.
     case switcherUsesShift
+    /// Return, keypad Enter and Escape confirm and cancel the open switcher.
+    case switcherKeyReserved
     /// Another Beam action already answers this combo.
     case conflict(ShortcutAction)
     /// macOS or most apps use it; allowed, with a warning.
@@ -83,8 +110,9 @@ public enum ShortcutValidator {
     /// Everything wrong with binding `combo` to `action`, blocking issues first.
     public static func issues(for combo: KeyCombo, action: ShortcutAction, in bindings: ShortcutBindings) -> [ShortcutIssue] {
         var issues: [ShortcutIssue] = []
-        if combo.modifiers.isDisjoint(with: [.control, .option, .command]) { issues.append(.needsModifier) }
+        if !combo.hasRequiredModifier { issues.append(.needsModifier) }
         if action == .switcher && combo.modifiers.contains(.shift) { issues.append(.switcherUsesShift) }
+        if action == .switcher && KeyCombo.isSwitcherReserved(combo.keyCode) { issues.append(.switcherKeyReserved) }
         let claimed = claims(combo, for: action)
         for other in ShortcutAction.allCases where other != action {
             if let bound = bindings[other], !claimed.isDisjoint(with: claims(bound, for: other)) {

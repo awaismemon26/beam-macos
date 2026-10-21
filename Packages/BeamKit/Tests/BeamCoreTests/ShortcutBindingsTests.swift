@@ -76,4 +76,24 @@ import Testing
         let defaultsData = try JSONEncoder().encode(ShortcutBindings.defaults)
         #expect(try JSONDecoder().decode(ShortcutBindings.self, from: defaultsData) == .defaults)
     }
+    @Test func switcherMayNotUseReturnEnterOrEscape() {
+        for key in [KeyCode.returnKey, KeyCode.keypadEnter, KeyCode.escape] {
+            let combo = KeyCombo(keyCode: key, modifiers: .control)
+            #expect(ShortcutValidator.issues(for: combo, action: .switcher, in: .defaults) == [.switcherKeyReserved])
+            // Fine for the other actions.
+            #expect(ShortcutValidator.issues(for: combo, action: .searchFiles, in: .defaults) == [])
+        }
+        #expect(ShortcutIssue.switcherKeyReserved.isBlocking)
+    }
+    @Test func sanitizedDropsBindingsWithoutAModifier() {
+        var b = ShortcutBindings.defaults
+        b.launcher = KeyCombo(keyCode: space, modifiers: [])
+        b.windowSearch = KeyCombo(keyCode: tab, modifiers: .shift)
+        b.searchFiles = KeyCombo(keyCode: jKey, modifiers: [.shift, .command])
+        b.switcher = KeyCombo(keyCode: KeyCode.escape, modifiers: .control)
+        let clean = b.sanitized
+        #expect(clean.launcher == nil && clean.windowSearch == nil && clean.switcher == nil)
+        #expect(clean.searchFiles == b.searchFiles)
+        #expect(ShortcutBindings.defaults.sanitized == .defaults)
+    }
 }
