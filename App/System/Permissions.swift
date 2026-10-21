@@ -17,6 +17,28 @@ enum Permissions {
         _ = AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
     }
 
+    /// Clears every Accessibility entry macOS holds for Beam's bundle ID (stale ones from older builds
+    /// stay "on" in System Settings but don't match this build), then re-adds this build, unchecked.
+    /// Returns false when `tccutil` refused.
+    static func resetAndPrompt() async -> Bool {
+        let bundleID = Bundle.main.bundleIdentifier ?? "dev.beam.Beam"
+        let ok = await Task.detached {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+            process.arguments = ["reset", "Accessibility", bundleID]
+            do {
+                try process.run()
+                process.waitUntilExit()
+                return process.terminationStatus == 0
+            } catch {
+                return false
+            }
+        }.value
+        promptOnce()
+        openAccessibilitySettings()
+        return ok
+    }
+
     /// Returns once the user has granted Accessibility access.
     static func waitUntilTrusted() async {
         while !isTrusted {

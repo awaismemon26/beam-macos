@@ -105,7 +105,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func installStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "command.square", accessibilityDescription: "Beam")
+        item.button?.image = MenuBarIcon.image
         let menu = NSMenu()
 
         let open = NSMenuItem(title: "Open Beam", action: #selector(openBeam), keyEquivalent: " ")
