@@ -3,7 +3,8 @@ import ApplicationServices
 import BeamCore
 
 /// Keeps a most-recently-used window list up to date by observing focus changes in every regular app
-/// (AXObserver) and app activations (NSWorkspace). No polling.
+/// (AXObserver) and app activations (NSWorkspace). No polling. AX requests run on a serial queue
+/// (in order, so MRU updates keep their sequence) and never on the main thread.
 @MainActor
 final class WindowActivityMonitor {
     private(set) var mru = MRUList()
@@ -12,6 +13,10 @@ final class WindowActivityMonitor {
 
     private var observers: [pid_t: AXObserver] = [:]
     private var workspaceTokens: [NSObjectProtocol] = []
+    private let axQueue = DispatchQueue(label: "dev.beam.window-activity", qos: .userInitiated)
+
+    /// A freshly launched app often rejects AX registration until it has finished starting.
+    private nonisolated static let registrationRetryDelays: [Double] = [0.5, 1, 2, 4, 8]
 
     private static let appNotifications = [
         kAXFocusedWindowChangedNotification, kAXMainWindowChangedNotification, kAXWindowCreatedNotification,
@@ -57,21 +62,51 @@ final class WindowActivityMonitor {
     }
 
     private func touchFocusedWindow(of pid: pid_t) {
-        if let id = WindowFocuser.focusedWindowID(ofPID: pid) { mru.touch(id) }
+        touchOffMain { WindowFocuser.focusedWindowID(ofPID: pid) }
+    }
+
+    /// Runs `lookup` on the AX queue and records its window as used, back on the main thread.
+    private func touchOffMain(_ lookup: @escaping @Sendable () -> CGWindowID?) {
+        axQueue.async { [weak self] in
+            guard let id = lookup() else { return }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { self?.mru.touch(id) }
+            }
+        }
     }
 
     private func observe(pid: pid_t) {
         guard observers[pid] == nil, pid != ProcessInfo.processInfo.processIdentifier else { return }
         var observer: AXObserver?
         guard AXObserverCreate(pid, Self.callback, &observer) == .success, let observer else { return }
-        let app = AXUIElementCreateApplication(pid)
-        AXUIElementSetMessagingTimeout(app, WindowEnumerator.messagingTimeout)
-        let refcon = Unmanaged.passUnretained(self).toOpaque()
-        for name in Self.appNotifications {
-            AXObserverAddNotification(observer, app, name as CFString, refcon)
-        }
         CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .defaultMode)
         observers[pid] = observer
+        register(
+            UncheckedBox(observer), pid: pid, names: Self.appNotifications,
+            refcon: UncheckedBox(Unmanaged.passUnretained(self).toOpaque()), attempt: 0, delay: 0
+        )
+    }
+
+    /// Adds the notifications on the AX queue, retrying the ones the app rejected.
+    private nonisolated func register(
+        _ observer: UncheckedBox<AXObserver>, pid: pid_t, names: [String],
+        refcon: UncheckedBox<UnsafeMutableRawPointer>, attempt: Int, delay: Double
+    ) {
+        axQueue.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, NSRunningApplication(processIdentifier: pid) != nil else { return }
+            let app = AXUIElementCreateApplication(pid)
+            let failed = names.filter { name in
+                let error = AXObserverAddNotification(observer.value, app, name as CFString, refcon.value)
+                return error != .success && error != .notificationAlreadyRegistered
+            }
+            guard !failed.isEmpty else { return }
+            guard attempt < Self.registrationRetryDelays.count else {
+                log.error("AX observer registration failed for pid \(pid)")
+                return
+            }
+            register(observer, pid: pid, names: failed, refcon: refcon, attempt: attempt + 1,
+                     delay: Self.registrationRetryDelays[attempt])
+        }
     }
 
     private func stopObserving(pid: pid_t) {
@@ -80,18 +115,16 @@ final class WindowActivityMonitor {
     }
 
     private func handle(notification: String, element: AXUIElement) {
-        var pid: pid_t = 0
-        AXUIElementGetPid(element, &pid)
+        var owner: pid_t = 0
+        AXUIElementGetPid(element, &owner)
+        let pid = owner
         switch notification {
         case kAXWindowCreatedNotification:
             onWindowsChanged?(pid)
         default:
             // For focus/main-window changes the element is the window itself.
-            if let id = PrivateAPIs.windowID(of: element) {
-                mru.touch(id)
-            } else {
-                touchFocusedWindow(of: pid)
-            }
+            let ref = AXRef(element: element)
+            touchOffMain { PrivateAPIs.windowID(of: ref.element) ?? WindowFocuser.focusedWindowID(ofPID: pid) }
         }
     }
 

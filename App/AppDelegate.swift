@@ -45,6 +45,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// Everything that needs Accessibility access.
     private func startServices() {
         log.info("Accessibility granted; starting services")
+        // Global default for every AX request Beam makes, so a hung app can never stall it for long.
+        AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), WindowEnumerator.messagingTimeout)
         activity.onWindowsChanged = { [enumerator] pid in
             Task { await enumerator.invalidate(pid: pid) }
         }
@@ -184,7 +186,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard let id = sender.representedObject as? UInt32,
               let window = cachedForMenu.first(where: { $0.id == id }) else { return }
         Task {
-            let element = await enumerator.axElement(for: id)
+            let element = enumerator.axElement(for: id)
             let result = await WindowFocuser.focus(window, element: element)
             if result == .focused { activity.touch(id) }
             log.info("Focus \(window.displayTitle, privacy: .public): \(String(describing: result), privacy: .public)")

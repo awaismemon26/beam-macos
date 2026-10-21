@@ -103,7 +103,7 @@ final class SwitcherController {
     private func focus(_ window: WindowInfo) {
         guard window.isReachable else { shake(); return }
         Task {
-            let element = await enumerator.axElement(for: window.id)
+            let element = enumerator.axElement(for: window.id)
             switch await WindowFocuser.focus(window, element: element) {
             case .focused:
                 activity.touch(window.id)

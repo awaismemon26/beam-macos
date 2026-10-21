@@ -94,7 +94,7 @@ final class WindowSearchController {
             return
         }
         Task {
-            let element = await enumerator.axElement(for: window.id)
+            let element = enumerator.axElement(for: window.id)
             guard element != nil else {
                 withAnimation(.linear(duration: 0.3)) { model.shakes += 1 }
                 return

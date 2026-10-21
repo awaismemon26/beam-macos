@@ -2,6 +2,7 @@ import AppKit
 import ApplicationServices
 import BeamCore
 import os
+import Synchronization
 
 /// An Accessibility element that may cross concurrency domains. AX calls are IPC to the target app
 /// and safe from any thread.
@@ -20,7 +21,8 @@ actor WindowEnumerator {
     private static let minimumSide: CGFloat = 50
 
     private let ownPID = ProcessInfo.processInfo.processIdentifier
-    private var elements: [CGWindowID: AXRef] = [:]
+    /// Read outside the actor so focusing a window never waits behind a running enumeration.
+    private let elementStore = Mutex<[CGWindowID: AXRef]>([:])
     /// Elements for off-Desktop windows found by the remote-token search, per pid.
     private var remoteElements: [pid_t: [CGWindowID: AXRef]] = [:]
     /// Where the remote-token search resumes for a pid when it ran out of budget.
@@ -32,12 +34,13 @@ actor WindowEnumerator {
     func cachedWindows() -> [WindowInfo] { lastAll }
     func cachedWindows(ofPID pid: pid_t) -> [WindowInfo] { lastByPID[pid] ?? [] }
 
-    func axElement(for id: CGWindowID) -> AXRef? { elements[id] }
+    nonisolated func axElement(for id: CGWindowID) -> AXRef? { elementStore.withLock { $0[id] } }
 
     /// Every window of every regular app, front-to-back.
     func allWindows() -> [WindowInfo] {
         let apps = Self.regularApps(excluding: ownPID)
-        let result = enumerate(apps: apps)
+        let (result, refs) = enumerate(apps: apps)
+        elementStore.withLock { $0 = refs } // also drops elements of closed windows
         lastAll = result
         for (pid, windows) in Dictionary(grouping: result, by: \.pid) { lastByPID[pid] = windows }
         return result
@@ -45,7 +48,8 @@ actor WindowEnumerator {
 
     func windows(ofPID pid: pid_t) -> [WindowInfo] {
         guard let app = NSRunningApplication(processIdentifier: pid), app.activationPolicy == .regular else { return [] }
-        let result = enumerate(apps: [AppSnapshot(app)])
+        let (result, refs) = enumerate(apps: [AppSnapshot(app)])
+        elementStore.withLock { $0.merge(refs) { $1 } }
         lastByPID[pid] = result
         return result
     }
@@ -85,7 +89,7 @@ actor WindowEnumerator {
         let order: Int
     }
 
-    private func enumerate(apps: [AppSnapshot]) -> [WindowInfo] {
+    private func enumerate(apps: [AppSnapshot]) -> ([WindowInfo], [CGWindowID: AXRef]) {
         let pids = Set(apps.map(\.pid))
         let cgWindows = Self.cgWindows(of: pids)
         let cgOrder = Dictionary(cgWindows.map { ($0.id, $0.order) }, uniquingKeysWith: min)
@@ -93,6 +97,7 @@ actor WindowEnumerator {
         let canFocus = PrivateAPIs.canFocusExactWindows
 
         var result: [(order: Int, info: WindowInfo)] = []
+        var refs: [CGWindowID: AXRef] = [:]
         for app in apps {
             let appElement = AXUIElementCreateApplication(app.pid)
             AXUIElementSetMessagingTimeout(appElement, Self.messagingTimeout)
@@ -120,7 +125,7 @@ actor WindowEnumerator {
             }
 
             for (id, (ref, attributes)) in found {
-                elements[id] = ref
+                refs[id] = ref
                 let info = WindowInfo(
                     id: id, pid: app.pid, appName: app.name, appSearchNames: app.searchNames, bundleID: app.bundleID,
                     title: attributes.title, isMinimized: attributes.isMinimized,
@@ -140,7 +145,7 @@ actor WindowEnumerator {
                 result.append((Int.max, info))
             }
         }
-        return result.sorted { $0.order < $1.order }.map(\.info)
+        return (result.sorted { $0.order < $1.order }.map(\.info), refs)
     }
 
     private static func cgWindows(of pids: Set<pid_t>) -> [CGWindow] {

@@ -110,7 +110,7 @@ final class EventTap: @unchecked Sendable {
     }
 }
 
-private struct UncheckedBox<T>: @unchecked Sendable {
+struct UncheckedBox<T>: @unchecked Sendable {
     let value: T
     init(_ value: T) { self.value = value }
 }

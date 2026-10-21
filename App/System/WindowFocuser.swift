@@ -12,7 +12,7 @@ enum FocusResult: Equatable {
 
 /// Brings one exact window to the front, across apps and Desktops, the way Raycast/AltTab do:
 /// SkyLight "set front process for window" + a synthetic "make key window" event + AX raise.
-@MainActor
+/// Not main-actor bound: AX calls block for up to the messaging timeout when the target app is busy.
 enum WindowFocuser {
     /// kCPSUserGenerated: treat the activation as user-initiated so macOS switches Desktops.
     private static let userGenerated: UInt32 = 0x200
