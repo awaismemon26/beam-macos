@@ -3,13 +3,21 @@
 # Build-folder copies are dropped from Launch Services so System Settings, Spotlight and Login Items
 # all resolve Beam to the installed copy (with its icon).
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+. "$(dirname "$0")/env.sh"
 LSR=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 cd "$ROOT"
 xcodegen generate >/dev/null
+if [ -n "$BEAM_TEAM_ID" ]; then
+    SIGN=(BEAM_TEAM_ID="$BEAM_TEAM_ID" -allowProvisioningUpdates)
+else
+    echo "note: no BEAM_TEAM_ID in .env; building unsigned. macOS will ask for Accessibility again after each rebuild."
+    # Hardened runtime must be off for ad-hoc builds, or macOS refuses to load SoulverCore.
+    SIGN=(CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual ENABLE_HARDENED_RUNTIME=NO)
+fi
+LOG="$(mktemp)"
 xcodebuild -project Beam.xcodeproj -scheme Beam -configuration Release -derivedDataPath build \
-    -allowProvisioningUpdates build >/tmp/beam-install-build.log 2>&1 \
-    || { grep -E "error:" /tmp/beam-install-build.log | head; exit 1; }
+    "${SIGN[@]}" build >"$LOG" 2>&1 \
+    || { grep -E "error:" "$LOG" | head; echo "full log: $LOG"; exit 1; }
 osascript -e 'tell application id "dev.beam.Beam" to quit' >/dev/null 2>&1 || true
 pkill -x Beam 2>/dev/null || true
 sleep 1

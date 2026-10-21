@@ -8,36 +8,31 @@ A fast, native macOS launcher (Swift 6, SwiftUI + AppKit, no web views):
 
 ## Build & run
 
-Build, install into `/Applications` and relaunch, all in one go:
+Requirements: macOS 27, Xcode 27, and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
 
-```bash
-Tools/install.sh
-```
+1. Configure signing (optional but recommended):
 
-Or step by step:
+   ```bash
+   cp .env.example .env
+   ```
 
-```bash
-xcodegen generate
-```
+   Put your Apple Development team ID in `.env` as `BEAM_TEAM_ID`. Find it in Xcode ▸ Settings ▸ Accounts, or
+   in the OU field of your "Apple Development" certificate. With a team, macOS keeps Beam's Accessibility
+   permission across rebuilds. Without one, Beam is built unsigned (ad-hoc) and asks again after every rebuild.
+   If signing fails with "0 valid identities", install Apple's
+   [WWDR G3 intermediate certificate](https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer).
 
-Signed with the Apple Development team set in `project.yml` (`BEAM_TEAM_ID`), which
-keeps the Accessibility permission across rebuilds. Needs that team's Apple Development certificate in the
-keychain, plus Apple's [WWDR G3 intermediate](https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer):
+2. Build, install into `/Applications` and launch:
 
-```bash
-xcodebuild -project Beam.xcodeproj -scheme Beam -configuration Release -derivedDataPath build -allowProvisioningUpdates build
-```
+   ```bash
+   Tools/install.sh
+   ```
 
-Without a team (ad-hoc). Hardened runtime must be off, or macOS refuses to load SoulverCore. macOS also
-forgets the Accessibility permission after every rebuild:
+   Or generate the Xcode project and work in Xcode:
 
-```bash
-xcodebuild -project Beam.xcodeproj -scheme Beam -configuration Release -derivedDataPath build CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual ENABLE_HARDENED_RUNTIME=NO build
-```
-
-```bash
-open build/Build/Products/Release/Beam.app
-```
+   ```bash
+   Tools/generate.sh
+   ```
 
 Core-logic tests:
 
