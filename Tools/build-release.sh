@@ -14,6 +14,7 @@ xcodegen generate >/dev/null
 LOG="$(mktemp)"
 xcodebuild -project Beam.xcodeproj -scheme Beam -configuration Release -derivedDataPath build/release \
     MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD" \
+    ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
     BEAM_TEAM_ID= CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual ENABLE_HARDENED_RUNTIME=NO \
     DEPLOYMENT_POSTPROCESSING=YES STRIP_INSTALLED_PRODUCT=YES STRIP_STYLE=non-global \
     DEBUG_INFORMATION_FORMAT=dwarf-with-dsym \

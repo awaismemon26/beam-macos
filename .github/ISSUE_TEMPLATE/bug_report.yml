@@ -1,0 +1,42 @@
+name: Bug report
+description: Something in Beam doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open two VS Code windows
+        2. Press ⌃ Tab
+        3. …
+    validations:
+      required: true
+  - type: input
+    id: beam-version
+    attributes:
+      label: Beam version
+      description: Settings ▸ About
+      placeholder: "0.1.0 (12)"
+    validations:
+      required: true
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS version
+      placeholder: "macOS 15.4, Apple silicon"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (optional)
+      description: "Output of: log show --last 5m --predicate 'subsystem == \"dev.beam.Beam\"'"
+      render: text

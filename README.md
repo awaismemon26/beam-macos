@@ -1,114 +1,123 @@
+<div align="center">
+
+<img src="assets/logo.png" width="128" height="128" alt="Beam logo">
+
 # Beam
 
-A fast, native macOS launcher (Swift 6, SwiftUI + AppKit, no web views):
+**Window switcher + productivity tool for macOS.**<br>
+Jump to any window, launch apps and calculate — instantly, from the keyboard.
 
-- **Ctrl+Tab**: switch between windows of the app you're in (VS Code, Teams, Chrome…)
-- **Option+Tab**: search every window by app name or title
-- **Option+Space**: launch apps and calculate (`5 % of 5000`, `100 usd in eur`, `3pm london in tokyo`)
+[![Latest release](https://img.shields.io/github/v/release/awaismemon26/beam?label=release&color=7b5cff)](https://github.com/awaismemon26/beam/releases/latest)
+[![CI](https://github.com/awaismemon26/beam/actions/workflows/ci.yml/badge.svg)](https://github.com/awaismemon26/beam/actions/workflows/ci.yml)
+[![macOS 15+](https://img.shields.io/badge/macOS-15%2B-000000?logo=apple&logoColor=white)](#install)
+[![Swift 6](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](https://www.swift.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-## Build & run
+[**Download**](https://github.com/awaismemon26/beam/releases/latest) ·
+[Features](#features) ·
+[Install](#install) ·
+[Shortcuts](#shortcuts) ·
+[Build from source](#build-from-source)
 
-Requirements: macOS 27, Xcode 27, and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
+<br>
 
-1. Configure signing (optional but recommended):
+<img src="assets/demo.gif" width="800" alt="Beam: launcher with calculator, window search and the Ctrl+Tab window switcher">
 
-   ```bash
-   cp .env.example .env
-   ```
+</div>
 
-   Put your Apple Development team ID in `.env` as `BEAM_TEAM_ID`. Find it in Xcode ▸ Settings ▸ Accounts, or
-   in the OU field of your "Apple Development" certificate. With a team, macOS keeps Beam's Accessibility
-   permission across rebuilds. Without one, Beam is built unsigned (ad-hoc) and asks again after every rebuild.
-   If signing fails with "0 valid identities", install Apple's
-   [WWDR G3 intermediate certificate](https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer).
+## Features
 
-2. Build, install into `/Applications` and launch:
+- **⌃ Tab — switch windows of the current app.** VS Code, Chrome, Teams, Xcode: hold Control, tap Tab to
+  move, release to jump. Works across Desktops and brings back minimized windows. Esc cancels.
+- **⌥ Tab — search every window.** Type an app name (`chrome`, `vscode`, `teams`) or part of a window title
+  (`jira`, `invoice`) and press Enter to go straight to that window — on any Desktop, even if minimized.
+- **⌥ Space — launcher.** Fuzzy app search that learns what you open most, plus Beam's own commands
+  (“settings”, “switch windows”).
+- **Built-in calculator.** `5 % of 5000`, `100 usd in eur`, `65 kg in lb`, `3pm london in tokyo`,
+  `days until dec 25` — the answer appears as you type; Enter copies it.
+- **Native and light.** Swift, SwiftUI and AppKit — no web views, no Electron. Panels open instantly, and Beam
+  idles at ~0% CPU and ~45 MB of memory.
+- **Yours to tune.** Rebind the launcher hotkey, open at login, hide the menu-bar icon, follow the system
+  appearance or pick light/dark.
 
-   ```bash
-   Tools/install.sh
-   ```
+## Install
 
-   Or generate the Xcode project and work in Xcode:
+1. Download **`Beam-<version>.zip`** from the [latest release](https://github.com/awaismemon26/beam/releases/latest)
+   and unzip it.
+2. Drag **Beam.app** into **Applications**.
+3. Open Beam. It isn't notarized by Apple yet, so the first time macOS says it can't verify the app:
+   open **System Settings ▸ Privacy & Security** and click **Open Anyway** (or run
+   `xattr -dr com.apple.quarantine /Applications/Beam.app` once).
+4. Beam asks for **Accessibility** access — turn it on in the window that appears. The Beam icon then shows up
+   in the menu bar.
 
-   ```bash
-   Tools/generate.sh
-   ```
+> **Using Raycast or Alfred?** Beam's launcher uses ⌥ Space by default. Change it in **Settings ▸ Beam Hotkey**,
+> or free ⌥ Space in the other app.
 
-## Tests
+**Requirements:** macOS 15 Sequoia or later, Apple silicon or Intel.
 
-| What | Command | Needs |
-|---|---|---|
-| Core logic: hotkeys, switcher state, fuzzy matching, ranking, calculator gate, keystroke performance (BeamKit, 107 tests) | `cd Packages/BeamKit && swift test` | — |
-| Keystroke performance with optimisations on (shipping numbers) | `cd Packages/BeamKit && swift test -c release -Xswiftc -enable-testing --filter PerformanceTests` | — |
-| Window-search rendering: draws the real Option+Tab view offscreen and reads the rows back | `Tools/RenderCheck/run.sh` | — |
-| End to end against the installed Beam: launcher, calculator, "settings" + Enter, window search, Ctrl+Tab, idle CPU/memory | `swift Tools/LiveTests/LiveTests.swift` | Beam running; Accessibility for your terminal; US keyboard layout |
+## Shortcuts
 
-The live tests type only after Beam reports its own search field as focused, and end every check with Esc.
-Pass test names to run a subset, e.g. `swift Tools/LiveTests/LiveTests.swift settings switcher`.
-
-## First run
-
-1. Beam shows a welcome window asking for **Accessibility** access. Click *Open System Settings* and turn
-   on **Beam** under Privacy & Security ▸ Accessibility. The window closes by itself once access is granted.
-2. Turn off Raycast's own hotkey so Option+Space reaches Beam: Raycast ▸ Settings ▸ General ▸ Raycast
-   Hotkey ▸ clear it, or quit Raycast.
-3. Beam adds itself to Login Items on first launch. Turn this off in Beam Settings (⌘, in any Beam panel, or the
-   menu-bar icon ▸ Settings…).
-
-## Manual verification checklist
-
-Setup: open **3 Chrome windows** (minimize one with ⌘M; move one to **Desktop 2** in Mission Control) and
-**2 VS Code windows** on Desktop 1.
-
-**Menu bar & permission**
-- [ ] A ⌘-square icon is in the menu bar, and there's no Beam icon in the Dock.
-- [ ] The welcome window closes by itself after you grant Accessibility.
-
-**Ctrl+Tab: windows of the current app**
-- [ ] In VS Code, Ctrl+Tab shows both VS Code windows, with the *second* one highlighted. VS Code does **not** switch editor tabs.
-- [ ] Holding Control: Tab moves down (wraps), Shift+Tab moves up. Releasing Control (or Enter) jumps to the highlighted window.
-- [ ] A single quick Ctrl+Tab flips to the previous window. Ctrl+Tab, then Esc, closes the panel and nothing changes.
-- [ ] In Chrome, the Desktop 2 window says "Desktop 2", and Enter on it switches to Desktop 2 with that window in front.
-- [ ] The minimized window says "Minimized", and Enter on it restores it.
-- [ ] Quick flip: Ctrl+Tab twice (releasing in between) returns you to the first window.
-- [ ] Typing elsewhere, Cmd+Tab and Ctrl+arrows still behave normally.
-
-**Option+Tab: window search**
-- [ ] Option+Tab opens a search panel listing every window. It doesn't type a tab or a special character in the app behind it.
-- [ ] "chrome" shows exactly the 3 Chrome windows (the rows, not just the count), "vscode" shows both VS Code windows, and "jira" finds a Chrome tab titled Jira.
-- [ ] ↑↓ / Tab move, Enter focuses, Esc or clicking elsewhere closes.
-
-**Option+Space: launcher + calculator**
-- [ ] "5 % of 5000" shows **250** on top. Enter copies it (`pbpaste` prints `250`) and shows "Copied".
-- [ ] "100 usd in eur", "3pm london in tokyo", "65 kg in pounds" and "days until dec 25" all show answers.
-- [ ] "saf" puts Safari first, "vsc" finds Visual Studio Code, and Enter launches it.
-- [ ] "1password" (if installed) shows the app and no calculator row.
-- [ ] "switch" → *Switch Windows* opens window search. "settings" → *Beam Settings* opens Settings.
-- [ ] Option+Space again (or Esc) hides the panel.
-
-**Settings**
-- [ ] Settings has a General and an About pane (sidebar), in the style of Raycast's settings.
-- [ ] Rebind "Beam Hotkey" to Ctrl+Space. Option+Space no longer opens Beam, Ctrl+Space does, and the change survives a relaunch. ↺ resets it to ⌥ Space.
-- [ ] "Open at Login" matches System Settings ▸ General ▸ Login Items, and Beam starts after logging in.
-- [ ] "Show in Menu Bar" off hides the icon; opening Beam again (Spotlight/Finder) or ⌘, in Beam opens Settings.
-- [ ] "Follow System Appearance" off shows Light/Dark; panels and Settings switch immediately.
-- [ ] About ▸ Currency Rates ▸ Refresh updates the "Updated…" time.
-
-**Robustness**
-- [ ] With a hung app (beachball), Ctrl+Tab and Option+Tab still open instantly. The hung app's windows may be missing.
-- [ ] Debug builds: menu-bar ▸ *Dump windows* logs every window with badges, viewable with
-  `log stream --predicate 'subsystem == "dev.beam.Beam"'`.
-
-## Performance
-
-Measured on an Apple-silicon Mac (release build, macOS 27):
-
-| | |
+| Shortcut | What it does |
 |---|---|
-| Hotkey → panel with a focused search field | ~1 ms (first open after launch ~25 ms) |
-| Ctrl+Tab → switcher visible | ~10 ms |
-| "settings" + Enter → Settings in front with keyboard focus | ~80 ms |
-| Worst keystroke, 600 apps / 300 windows | 1.1 ms / 2.2 ms |
-| Idle | ~0% CPU, ~46 MB memory footprint |
+| <kbd>⌃</kbd> <kbd>Tab</kbd> | Switch windows of the current app. Keep holding <kbd>⌃</kbd>: <kbd>Tab</kbd> / <kbd>⇧</kbd> <kbd>Tab</kbd> move, releasing <kbd>⌃</kbd> jumps, <kbd>Esc</kbd> cancels. |
+| <kbd>⌥</kbd> <kbd>Tab</kbd> | Search all windows. <kbd>↑</kbd> <kbd>↓</kbd> select, <kbd>⏎</kbd> go, <kbd>Esc</kbd> close. |
+| <kbd>⌥</kbd> <kbd>Space</kbd> | Launcher and calculator (rebindable). <kbd>⏎</kbd> opens the app or copies the answer. |
+| <kbd>⌘</kbd> <kbd>,</kbd> | Beam Settings (from the launcher). Opening Beam again also shows Settings. |
 
-Signposts (`switcher.open`, `windowSearch.open`, `root.open`, `root.query`) appear in Instruments ▸ Points of Interest.
+## Permissions & privacy
+
+- **Accessibility** is required to list windows and bring the one you pick to the front. Like other window
+  switchers, Beam also uses a few macOS window-server functions to reach windows on other Desktops.
+- **No telemetry, no accounts.** Beam's only network request fetches currency exchange rates from the
+  European Central Bank for the calculator, every few hours. Everything else stays on your Mac.
+
+## Build from source
+
+Requirements: Xcode 26 or later and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
+
+```bash
+git clone https://github.com/awaismemon26/beam.git
+cd beam
+cp .env.example .env     # optional: set BEAM_TEAM_ID to your Apple Development team
+Tools/install.sh         # builds, installs into /Applications and launches Beam
+```
+
+With a team ID, macOS keeps Beam's Accessibility permission across rebuilds; without one, Beam is built
+unsigned and asks again after each rebuild. To work in Xcode instead, run `Tools/generate.sh` and open
+`Beam.xcodeproj`. `Tools/build-release.sh` produces the same zip as the release pipeline.
+
+### Tests
+
+| Suite | Command |
+|---|---|
+| Core logic and keystroke performance (107 tests) | `cd Packages/BeamKit && swift test` |
+| Window-search rendering check | `Tools/RenderCheck/run.sh` |
+| End to end against the installed app | `swift Tools/LiveTests/LiveTests.swift` |
+
+The end-to-end tests drive the real hotkeys, so they need Beam running, Accessibility access for your terminal
+and a US keyboard layout. They type only after Beam's own search field has focus.
+
+### Project layout
+
+```
+App/                 macOS app: event tap, window enumeration and focusing, panels, settings
+Packages/BeamKit/    pure, unit-tested logic (BeamCore) and the calculator wrapper (BeamCalc)
+Tools/               install, release build, demo GIF, rendering check and end-to-end tests
+```
+
+## Contributing
+
+Bug reports, ideas and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+Release history is in [CHANGELOG.md](CHANGELOG.md).
+
+## Acknowledgements
+
+- The calculator is powered by [SoulverCore](https://github.com/soulverteam/SoulverCore), used under its licence.
+- Reaching windows on other Desktops follows the technique documented by
+  [AltTab](https://github.com/lwouis/alt-tab-macos).
+
+## License
+
+Beam is released under the [MIT License](LICENSE). SoulverCore is a separate, closed-source component with its
+own licence.

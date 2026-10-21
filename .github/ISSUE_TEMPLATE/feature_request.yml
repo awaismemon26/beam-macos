@@ -1,0 +1,19 @@
+name: Feature request
+description: Suggest an idea for Beam
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to do?
+      description: The problem or workflow, in your own words.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could Beam help?
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've tried
