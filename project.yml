@@ -11,7 +11,7 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    MACOSX_DEPLOYMENT_TARGET: "27.0"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
     BEAM_TEAM_ID: ${BEAM_TEAM_ID} # from .env via Tools/generate.sh / Tools/install.sh
 targets:
   Beam:

@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "BeamKit",
-    platforms: [.macOS("27.0")],
+    platforms: [.macOS(.v15)],
     products: [
         .library(name: "BeamCore", targets: ["BeamCore"]),
         .library(name: "BeamCalc", targets: ["BeamCalc"]),

@@ -23,7 +23,7 @@ pkill -x Beam 2>/dev/null || true
 sleep 1
 rm -rf /Applications/Beam.app
 ditto build/Build/Products/Release/Beam.app /Applications/Beam.app
-for copy in build/Build/Products/*/Beam.app; do "$LSR" -u "$ROOT/$copy" 2>/dev/null || true; done
+for copy in build/Build/Products/*/Beam.app build/*/Build/Products/*/Beam.app; do "$LSR" -u "$ROOT/$copy" 2>/dev/null || true; done
 "$LSR" -f /Applications/Beam.app
 open /Applications/Beam.app
 echo "Installed /Applications/Beam.app"
