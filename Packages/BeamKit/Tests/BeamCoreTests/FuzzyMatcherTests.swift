@@ -20,4 +20,11 @@ import Testing
     @Test func tierOrdering() {
         #expect(FuzzyMatcher.match("term", in: "Terminal")! > FuzzyMatcher.match("term", in: "Intermediate")!)
     }
+
+    @Test func minimumTierSkipsSubsequence() {
+        #expect(FuzzyMatcher.match("vsc", in: "Visual Studio Code")?.tier == .wordInitials)
+        #expect(FuzzyMatcher.match("vdc", in: "Visual Studio Code")?.tier == .subsequence)
+        #expect(FuzzyMatcher.match("vdc", in: "Visual Studio Code", minimumTier: .substring) == nil)
+        #expect(FuzzyMatcher.match("studio", in: "Visual Studio Code", minimumTier: .substring)?.tier == .wordPrefix)
+    }
 }

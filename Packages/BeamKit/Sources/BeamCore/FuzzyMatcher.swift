@@ -22,10 +22,26 @@ public struct FuzzyMatch: Comparable, Sendable {
     }
 }
 
+/// A query normalized once, for matching against many candidates (one keystroke = hundreds of matches).
+public struct PreparedQuery: Sendable {
+    let characters: [Character]
+
+    public init(_ query: String) {
+        characters = Array(FuzzyMatcher.normalize(query))
+    }
+
+    public var isEmpty: Bool { characters.isEmpty }
+}
+
 public enum FuzzyMatcher {
-    /// Matches `query` against `candidate`, case- and diacritic-insensitively. `nil` when it doesn't match.
-    public static func match(_ query: String, in candidate: String) -> FuzzyMatch? {
-        let q = Array(normalize(query))
+    /// Matches `query` against `candidate`, case- and diacritic-insensitively. `nil` when it doesn't match,
+    /// or only matches below `minimumTier` (skipping the costly subsequence search when it isn't wanted).
+    public static func match(_ query: String, in candidate: String, minimumTier: MatchTier = .subsequence) -> FuzzyMatch? {
+        match(PreparedQuery(query), in: candidate, minimumTier: minimumTier)
+    }
+
+    public static func match(_ query: PreparedQuery, in candidate: String, minimumTier: MatchTier = .subsequence) -> FuzzyMatch? {
+        let q = query.characters
         guard !q.isEmpty else { return nil }
         let c = Array(normalize(candidate))
         guard !c.isEmpty else { return nil }
@@ -49,6 +65,7 @@ public enum FuzzyMatcher {
 
         if contains(c, q) { return result(.substring, span: q.count) }
 
+        guard minimumTier <= .subsequence else { return nil }
         if let span = tightestSubsequenceSpan(of: q, in: c) {
             return result(.subsequence, span: span)
         }
@@ -62,20 +79,26 @@ public enum FuzzyMatcher {
 
     /// Indices (into the normalized character array) where words begin. Words split on separators and
     /// on lower→upper camel-case boundaries in the original string.
+    private static let separators: Set<Character> = [" ", "-", "_", ".", "·", "/", ":", "(", ")", "—", "–"]
+
     private static func wordStarts(of original: String, normalizedCount: Int) -> [Int] {
-        let separators: Set<Character> = [" ", "-", "_", ".", "·", "/", ":", "(", ")", "—", "–"]
         let chars = Array(original.trimmingCharacters(in: .whitespacesAndNewlines))
         // Folding can change length for exotic characters; fall back to separator-free single word then.
         guard chars.count == normalizedCount else { return [0] }
         var starts: [Int] = []
-        for i in chars.indices {
-            let ch = chars[i]
-            if separators.contains(ch) { continue }
-            if i == 0 || separators.contains(chars[i - 1]) {
-                starts.append(i)
-            } else if ch.isUppercase && chars[i - 1].isLowercase {
+        var previousIsSeparator = true
+        var previousIsLower = false
+        for (i, ch) in chars.enumerated() {
+            let isSeparator = separators.contains(ch)
+            // ASCII fast path; Character's Unicode case properties are slow and titles are mostly ASCII.
+            let ascii = ch.asciiValue
+            let isUpper = ascii.map { $0 >= 65 && $0 <= 90 } ?? ch.isUppercase
+            let isLower = ascii.map { $0 >= 97 && $0 <= 122 } ?? ch.isLowercase
+            if !isSeparator && (previousIsSeparator || (isUpper && previousIsLower)) {
                 starts.append(i)
             }
+            previousIsSeparator = isSeparator
+            previousIsLower = isLower
         }
         return starts.isEmpty ? [0] : starts
     }

@@ -11,9 +11,10 @@ public enum AppRanker {
                 .prefix(limit)
                 .map(\.app)
         }
+        let prepared = PreparedQuery(q)
         return apps
             .compactMap { app in
-                FuzzyMatcher.match(q, in: app.name).map { (app: app, match: $0, frecency: usage.frecency(app.id, now: now)) }
+                FuzzyMatcher.match(prepared, in: app.name).map { (app: app, match: $0, frecency: usage.frecency(app.id, now: now)) }
             }
             .sorted { a, b in
                 if a.match.tier != b.match.tier { return a.match.tier > b.match.tier }

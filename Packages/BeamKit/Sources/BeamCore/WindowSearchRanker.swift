@@ -10,7 +10,8 @@ public enum WindowSearchRanker {
     public static func rank(_ windows: [WindowInfo], query: String) -> [WindowInfo] {
         let q = FuzzyMatcher.normalize(query)
         guard !q.isEmpty else { return windows }
-        let queries = [q] + (aliases[q].map { [$0] } ?? [])
+        let queries = ([q] + (aliases[q].map { [$0] } ?? [])).map(PreparedQuery.init)
+        let titleQuery = PreparedQuery(q)
 
         var appHits: [(offset: Int, match: FuzzyMatch, window: WindowInfo)] = []
         var titleHits: [(offset: Int, match: FuzzyMatch, window: WindowInfo)] = []
@@ -21,7 +22,7 @@ public enum WindowSearchRanker {
                 .max()
             if let appMatch {
                 appHits.append((offset, appMatch, window))
-            } else if let titleMatch = FuzzyMatcher.match(q, in: window.title), titleMatch.tier >= .substring {
+            } else if let titleMatch = FuzzyMatcher.match(titleQuery, in: window.title, minimumTier: .substring) {
                 // Loose subsequence matches across long titles are noise; require at least a substring.
                 titleHits.append((offset, titleMatch, window))
             }
