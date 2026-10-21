@@ -70,8 +70,18 @@ public struct HotkeyClassifier: Sendable {
             return .reenableTap
 
         case let .keyDown(keyCode, mods, isRepeat):
+            // Control's release was missed (the tap was disabled at the time): close and let the key through.
+            if isSwitcherOpen && !mods.contains(.control) {
+                isSwitcherOpen = false
+                swallowedDowns.remove(keyCode)
+                return .switcher(.controlReleased)
+            }
             let action = classifyKeyDown(keyCode: keyCode, mods: mods, isRepeat: isRepeat)
-            if action != .pass { swallowedDowns.insert(keyCode) }
+            if action == .pass {
+                swallowedDowns.remove(keyCode) // a stale entry whose keyUp was lost must not eat this one
+            } else {
+                swallowedDowns.insert(keyCode)
+            }
             // Track open/closed here, synchronously, so a quick Control release can't race the UI.
             switch action {
             case .switcher(.tab): isSwitcherOpen = true

@@ -60,6 +60,10 @@ final class EventTap: @unchecked Sendable {
             return Unmanaged.passUnretained(event)
         case .reenableTap:
             if let machPort { CGEvent.tapEnable(tap: machPort, enable: true) }
+            // Modifier changes made while disabled were never seen; resync so the switcher can't stay stuck.
+            let held = Self.modifiers(CGEventSource.flagsState(.combinedSessionState))
+            let resync = classifier.withLock { $0.classify(.flagsChanged(modifiers: held)) }
+            if resync != .pass { dispatch(resync) }
             return Unmanaged.passUnretained(event)
         case .swallow:
             return nil

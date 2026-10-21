@@ -18,4 +18,15 @@ import Testing
     @Test func resultEqualToInputHidden() { #expect(!CalculatorGate.shouldShow(input: "pi", result: "pi")) }
     @Test func realResultShown() { #expect(CalculatorGate.shouldShow(input: "5 % of 5000", result: "250")) }
     @Test func nilResultHidden() { #expect(!CalculatorGate.shouldShow(input: "5 % of 5000", result: nil)) }
+
+    @Test(arguments: [("Affinity Photo 2", "2"), ("Office 365", "365"), ("Things 3", "3"), ("Xcode 16", "16"), ("1password", "1")])
+    func appNameNumberEchoHidden(input: String, result: String) {
+        #expect(!CalculatorGate.shouldShow(input: input, result: result, locale: Locale(identifier: "en_US")))
+    }
+    @Test func percentEchoWithSpacingHidden() {
+        #expect(!CalculatorGate.shouldShow(input: "100%", result: "100 %", locale: Locale(identifier: "de_DE")))
+    }
+    @Test func arithmeticResultMatchingAnOperandStillShown() {
+        #expect(CalculatorGate.shouldShow(input: "2 * 1", result: "2", locale: Locale(identifier: "en_US")))
+    }
 }

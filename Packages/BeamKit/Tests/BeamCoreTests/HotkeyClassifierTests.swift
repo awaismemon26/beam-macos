@@ -102,4 +102,22 @@ import Testing
         _ = c.classify(down(esc, [.control]))
         #expect(!c.isSwitcherOpen)
     }
+
+    @Test func keyDownWithoutControlWhileOpenClosesAndPasses() {
+        // Control was released while the tap was disabled, so its flagsChanged never arrived.
+        var c = HotkeyClassifier()
+        _ = c.classify(down(tab, [.control]))
+        #expect(c.classify(down(aKey, [])) == .switcher(.controlReleased))
+        #expect(!c.isSwitcherOpen)
+        #expect(c.classify(.keyUp(keyCode: aKey, modifiers: [])) == .pass)
+    }
+    @Test func staleSwallowedKeyUpDoesNotEatNextKeyUp() {
+        // Tab's keyUp was lost while the tap was disabled; the next ordinary Tab must reach the app whole.
+        var c = HotkeyClassifier()
+        _ = c.classify(down(tab, [.control]))
+        _ = c.classify(.tapDisabled)
+        _ = c.classify(.flagsChanged(modifiers: []))
+        #expect(c.classify(down(tab, [])) == .pass)
+        #expect(c.classify(.keyUp(keyCode: tab, modifiers: [])) == .pass)
+    }
 }

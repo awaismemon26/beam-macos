@@ -16,4 +16,13 @@ import Testing
         #expect(await german.evaluate("1/4")?.value == "0,25")
     }
     @Test func keepsExpression() async { #expect(await calc.evaluate(" 123 + 456 ")?.expression == "123 + 456") }
+
+    @Test(arguments: ["Affinity Photo 2", "Office 365", "Things 3", "Xcode 16", "1Password"])
+    func appNamesWithNumbersAreNotCalculations(name: String) async {
+        #expect(await calc.evaluate(name) == nil)
+    }
+    @Test func germanPercentEchoHidden() async {
+        let german = CalculatorService(liveRates: false, locale: Locale(identifier: "de_DE"))
+        #expect(await german.evaluate("100%") == nil)
+    }
 }
