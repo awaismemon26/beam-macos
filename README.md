@@ -34,17 +34,17 @@ Requirements: macOS 27, Xcode 27, and [XcodeGen](https://github.com/yonaskolb/Xc
    Tools/generate.sh
    ```
 
-Core-logic tests:
+## Tests
 
-```bash
-cd Packages/BeamKit && swift test
-```
+| What | Command | Needs |
+|---|---|---|
+| Core logic: hotkeys, switcher state, fuzzy matching, ranking, calculator gate, keystroke performance (BeamKit, 107 tests) | `cd Packages/BeamKit && swift test` | — |
+| Keystroke performance with optimisations on (shipping numbers) | `cd Packages/BeamKit && swift test -c release -Xswiftc -enable-testing --filter PerformanceTests` | — |
+| Window-search rendering: draws the real Option+Tab view offscreen and reads the rows back | `Tools/RenderCheck/run.sh` | — |
+| End to end against the installed Beam: launcher, calculator, "settings" + Enter, window search, Ctrl+Tab, idle CPU/memory | `swift Tools/LiveTests/LiveTests.swift` | Beam running; Accessibility for your terminal; US keyboard layout |
 
-Window-search rendering check (draws the real Option+Tab view offscreen and reads the rows back):
-
-```bash
-Tools/RenderCheck/run.sh
-```
+The live tests type only after Beam reports its own search field as focused, and end every check with Esc.
+Pass test names to run a subset, e.g. `swift Tools/LiveTests/LiveTests.swift settings switcher`.
 
 ## First run
 
@@ -101,6 +101,14 @@ Setup: open **3 Chrome windows** (minimize one with ⌘M; move one to **Desktop 
 
 ## Performance
 
-Signposts (`switcher.open`, `windowSearch.open`, `root.open`, `root.query`) appear in Instruments ▸
-*Points of Interest*. Targets: hotkey → panel < 16 ms, keystroke → results < 16 ms. Measured idle (Release):
-0.0% CPU, 31 MB footprint.
+Measured on an Apple-silicon Mac (release build, macOS 27):
+
+| | |
+|---|---|
+| Hotkey → panel with a focused search field | ~1 ms (first open after launch ~25 ms) |
+| Ctrl+Tab → switcher visible | ~10 ms |
+| "settings" + Enter → Settings in front with keyboard focus | ~80 ms |
+| Worst keystroke, 600 apps / 300 windows | 1.1 ms / 2.2 ms |
+| Idle | ~0% CPU, ~46 MB memory footprint |
+
+Signposts (`switcher.open`, `windowSearch.open`, `root.open`, `root.query`) appear in Instruments ▸ Points of Interest.

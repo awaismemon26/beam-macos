@@ -50,6 +50,7 @@ final class WindowSearchController {
             onActivate: { [weak self] index in self?.activate(index) }
         ))
         panel.onResignKey = { [weak self] in self?.dismiss() }
+        DispatchQueue.main.async { [panel] in panel.warmUp() }
     }
 
     var isVisible: Bool { panel.isVisible }

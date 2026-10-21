@@ -82,6 +82,19 @@ final class BeamPanel: NSPanel {
         orderOut(nil)
     }
 
+    /// Lays out and draws the panel once, invisibly, so the first real `present()` doesn't pay for
+    /// SwiftUI's first render.
+    func warmUp() {
+        guard !isVisible else { return }
+        alphaValue = 0
+        setFrameOrigin(NSPoint(x: -10_000, y: -10_000))
+        orderFrontRegardless()
+        contentView?.layoutSubtreeIfNeeded()
+        displayIfNeeded()
+        orderOut(nil)
+        alphaValue = 1
+    }
+
     override func resignKey() {
         super.resignKey()
         onResignKey?()

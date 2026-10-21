@@ -76,6 +76,7 @@ final class RootSearchController {
             onSettings: { [weak self] in self?.dismiss(); openSettings() }
         ))
         panel.onResignKey = { [weak self] in self?.dismiss() }
+        DispatchQueue.main.async { [panel] in panel.warmUp() }
 
         Task { [weak self, appIndex] in
             await appIndex.start { [weak self] in

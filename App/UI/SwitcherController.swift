@@ -35,6 +35,7 @@ final class SwitcherController {
         self.activity = activity
         self.setTapSwitcherOpen = setTapSwitcherOpen
         panel.host(SwitcherView(model: model))
+        DispatchQueue.main.async { [panel] in panel.warmUp() }
         // Keep the cache warm for whichever app becomes frontmost.
         activationToken = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main

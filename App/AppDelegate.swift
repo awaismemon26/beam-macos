@@ -183,22 +183,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         bringToFront(settingsWindow)
     }
 
-    /// Beam has no Dock icon and its panels don't activate it, so macOS may decline `NSApp.activate()`.
-    /// Put the window on top regardless, ask politely, and force activation only if that was declined,
-    /// so the window also gets keyboard focus.
+    /// Beam has no Dock icon and its panels don't activate it, so macOS declines the cooperative
+    /// `NSApp.activate()` when another app is in front. Put the window on top regardless and force
+    /// activation right away, so the window has keyboard focus without a visible delay.
     private func bringToFront(_ window: NSWindow?) {
         guard let window else { return }
         window.orderFrontRegardless()
-        window.makeKey()
-        NSApp.activate()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            MainActor.assumeIsolated {
-                guard !NSApp.isActive, window.isVisible else { return }
-                log.info("Activation declined; forcing")
-                (NSApp as LegacyActivation).activate(ignoringOtherApps: true)
-                window.makeKeyAndOrderFront(nil)
-            }
-        }
+        (NSApp as LegacyActivation).activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
     }
 
     #if DEBUG
