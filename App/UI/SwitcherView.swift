@@ -26,9 +26,6 @@ struct SwitcherView: View {
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
             Spacer()
-            Text("⌃⇥ next · release ⌃ to switch · esc cancel")
-                .font(.system(size: 11))
-                .foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
