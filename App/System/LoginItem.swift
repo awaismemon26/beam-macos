@@ -11,11 +11,23 @@ enum LoginItem {
         }
     }
 
-    /// Turns launch-at-login on the first time Beam runs (spec: on by default).
+    /// Turns launch-at-login on the first time Beam runs (spec: on by default), and re-points an enabled
+    /// login item at this copy when Beam was moved (e.g. installed into /Applications).
     static func applyDefaultOnce() {
-        let key = "didSetDefaultLoginItem"
-        guard !UserDefaults.standard.bool(forKey: key) else { return }
-        UserDefaults.standard.set(true, forKey: key)
-        do { try set(true) } catch { log.error("Login item: \(error.localizedDescription, privacy: .public)") }
+        let defaults = UserDefaults.standard
+        let firstRunKey = "didSetDefaultLoginItem", pathKey = "loginItemBundlePath"
+        let path = Bundle.main.bundlePath
+        do {
+            if !defaults.bool(forKey: firstRunKey) {
+                defaults.set(true, forKey: firstRunKey)
+                try set(true)
+            } else if isEnabled, defaults.string(forKey: pathKey) != path {
+                try SMAppService.mainApp.unregister()
+                try SMAppService.mainApp.register()
+            }
+            if isEnabled { defaults.set(path, forKey: pathKey) }
+        } catch {
+            log.error("Login item: \(error.localizedDescription, privacy: .public)")
+        }
     }
 }

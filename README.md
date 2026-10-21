@@ -8,6 +8,14 @@ A fast, native macOS launcher (Swift 6, SwiftUI + AppKit, no web views):
 
 ## Build & run
 
+Build, install into `/Applications` and relaunch, all in one go:
+
+```bash
+Tools/install.sh
+```
+
+Or step by step:
+
 ```bash
 xcodegen generate
 ```
