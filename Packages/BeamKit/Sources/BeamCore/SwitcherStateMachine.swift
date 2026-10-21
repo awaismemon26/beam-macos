@@ -8,6 +8,7 @@ public enum SwitcherCommand: Equatable, Sendable {
 public struct SwitcherStateMachine: Sendable {
     public private(set) var isOpen = false
     public private(set) var highlighted = 0
+    private var openedBackwards = false
 
     public init() {}
 
@@ -15,7 +16,8 @@ public struct SwitcherStateMachine: Sendable {
         guard isOpen else {
             guard case let .tab(shift) = key else { return .none }
             isOpen = true
-            highlighted = shift ? max(itemCount - 1, 0) : (itemCount > 1 ? 1 : 0)
+            openedBackwards = shift
+            highlighted = Self.openingHighlight(backwards: shift, itemCount: itemCount)
             return .open(highlight: highlighted)
         }
         switch key {
@@ -35,7 +37,12 @@ public struct SwitcherStateMachine: Sendable {
     /// Re-applies the opening highlight after the window list loaded late (only meaningful before the
     /// user has moved). Returns the new highlight.
     public mutating func resetHighlight(itemCount: Int) -> Int {
-        highlighted = isOpen && itemCount > 1 ? 1 : 0
+        highlighted = isOpen ? Self.openingHighlight(backwards: openedBackwards, itemCount: itemCount) : 0
         return highlighted
+    }
+
+    /// Ctrl+Tab starts on the previous window; Ctrl+Shift+Tab on the last one.
+    private static func openingHighlight(backwards: Bool, itemCount: Int) -> Int {
+        backwards ? max(itemCount - 1, 0) : (itemCount > 1 ? 1 : 0)
     }
 }

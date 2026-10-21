@@ -72,7 +72,7 @@ struct SettingsView: View {
             while !Task.isCancelled {
                 isTrusted = Permissions.isTrusted
                 launchAtLogin = LoginItem.isEnabled
-                try? await Task.sleep(for: .seconds(1))
+                try? await Task.sleep(for: .seconds(3))
             }
         }
     }

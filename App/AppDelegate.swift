@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let settings = AppSettings()
     let calculator = CalculatorService()
     private var settingsWindow: NSWindow?
+    private var settingsCloseToken: NSObjectProtocol?
 
     let enumerator = WindowEnumerator()
     let activity = WindowActivityMonitor()
@@ -146,6 +147,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             window.isReleasedWhenClosed = false
             window.contentView = NSHostingView(rootView: SettingsView(settings: settings, calculator: calculator))
             window.center()
+            // Drop the content on close so its views disappear: that ends hotkey recording and status polling.
+            settingsCloseToken = NotificationCenter.default.addObserver(
+                forName: NSWindow.willCloseNotification, object: window, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.settingsWindow?.contentView = nil
+                    self.settingsWindow = nil
+                    if let token = self.settingsCloseToken { NotificationCenter.default.removeObserver(token) }
+                    self.settingsCloseToken = nil
+                }
+            }
             settingsWindow = window
         }
         NSApp.activate()

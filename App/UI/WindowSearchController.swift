@@ -100,8 +100,15 @@ final class WindowSearchController {
                 return
             }
             panel.dismiss()
-            if await WindowFocuser.focus(window, element: element) == .focused {
+            switch await WindowFocuser.focus(window, element: element) {
+            case .focused:
                 activity.touch(window.id)
+            case .unreachable:
+                // Nothing changed on screen: bring the panel back and say so.
+                panel.present()
+                withAnimation(.linear(duration: 0.3)) { model.shakes += 1 }
+            case .mismatch:
+                break
             }
         }
     }

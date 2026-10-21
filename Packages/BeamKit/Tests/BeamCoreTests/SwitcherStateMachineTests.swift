@@ -66,4 +66,10 @@ import Testing
         #expect(s.resetHighlight(itemCount: 3) == 0)
         #expect(!s.isOpen)
     }
+
+    @Test func resetHighlightAfterShiftOpenPicksLast() {
+        var s = SwitcherStateMachine()
+        _ = s.handle(.tab(shift: true), itemCount: 0)
+        #expect(s.resetHighlight(itemCount: 3) == 2)
+    }
 }

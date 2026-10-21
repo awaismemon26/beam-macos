@@ -93,8 +93,9 @@ final class SwitcherController {
             guard model.windows.indices.contains(index) else { return }
             focus(model.windows[index])
         case .close:
+            // Esc / Control release were already tracked by the tap; telling it again here could
+            // overwrite a newer Ctrl+Tab the tap has seen but this queue hasn't handled yet.
             panel.dismiss()
-            setTapSwitcherOpen(false)
         case .none:
             break
         }
@@ -102,11 +103,15 @@ final class SwitcherController {
 
     private func focus(_ window: WindowInfo) {
         guard window.isReachable else { shake(); return }
+        let generation = openGeneration
         Task {
             let element = enumerator.axElement(for: window.id)
-            switch await WindowFocuser.focus(window, element: element) {
+            let result = await WindowFocuser.focus(window, element: element)
+            if result == .focused { activity.touch(window.id) }
+            // The user may have closed and reopened the switcher while focusing ran.
+            guard generation == openGeneration else { return }
+            switch result {
             case .focused:
-                activity.touch(window.id)
                 close()
             case .unreachable:
                 shake()
@@ -116,9 +121,11 @@ final class SwitcherController {
         }
     }
 
+    /// Closes after Beam itself finished (not a key the tap saw), so the tap is told too.
     private func close() {
         guard machine.isOpen else { return }
         apply(machine.handle(.escape, itemCount: model.windows.count))
+        setTapSwitcherOpen(false)
     }
 
     private func shake() {

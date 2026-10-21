@@ -93,6 +93,7 @@ final class RootSearchController {
         model.showsCopied = false
         calcResult = nil
         rebuildItems()
+        model.selection = 0
         model.presentCount += 1
         panel.present()
         Signpost.end("root.open", signpost)
@@ -168,8 +169,10 @@ final class RootSearchController {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(result.value, forType: .string)
             withAnimation(Theme.spring) { model.showsCopied = true }
+            let presentation = model.presentCount
             Task {
                 try? await Task.sleep(for: .milliseconds(600))
+                guard presentation == model.presentCount else { return } // reopened meanwhile
                 dismiss()
             }
         case let .app(app):
