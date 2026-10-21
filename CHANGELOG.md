@@ -5,7 +5,7 @@ All notable changes to Beam are documented here. The format follows
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-10-21
+## [1.0.0] - 2026-10-21
 
 The first release.
 
@@ -23,5 +23,5 @@ The first release.
 - Guided Accessibility onboarding, including a one-click reset for stale permission entries.
 - Universal build (Apple silicon and Intel) for macOS 15 and later.
 
-[Unreleased]: https://github.com/awaismemon26/beam/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/awaismemon26/beam/releases/tag/v0.1.0
+[Unreleased]: https://github.com/awaismemon26/beam/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/awaismemon26/beam/releases/tag/v1.0.0

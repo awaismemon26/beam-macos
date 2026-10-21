@@ -24,7 +24,7 @@ body:
     attributes:
       label: Beam version
       description: Settings ▸ About
-      placeholder: "0.1.0 (12)"
+      placeholder: "1.0.0 (12)"
     validations:
       required: true
   - type: input

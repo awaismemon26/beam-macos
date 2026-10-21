@@ -46,7 +46,7 @@ Tools/install.sh        # or: build, install into /Applications and launch
 ## Releasing (maintainers)
 
 1. Move the `[Unreleased]` notes in `CHANGELOG.md` under a new version heading.
-2. Tag and push: `git tag v0.2.0 && git push origin v0.2.0`.
+2. Tag and push: `git tag v1.1.0 && git push origin v1.1.0`.
 3. The **Release** workflow tests, builds a universal `Beam-<version>.zip` with a SHA-256 checksum and creates a
    **draft** GitHub release with the changelog notes. Review it and click **Publish**.
 

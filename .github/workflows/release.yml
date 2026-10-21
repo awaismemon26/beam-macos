@@ -1,6 +1,6 @@
 name: Release
 
-# Push a tag like v0.2.0: tests, builds the universal app and creates a *draft* GitHub release with the
+# Push a tag like v1.1.0: tests, builds the universal app and creates a *draft* GitHub release with the
 # CHANGELOG notes, the zip and its SHA-256. Review the draft and click Publish.
 on:
   push:

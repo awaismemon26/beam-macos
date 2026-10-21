@@ -1,6 +1,6 @@
 #!/bin/bash
 # Prints the GitHub release notes for a version: its CHANGELOG section, install steps and the checksum.
-#   Tools/release-notes.sh 0.1.0
+#   Tools/release-notes.sh 1.0.0
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="${1#v}"
