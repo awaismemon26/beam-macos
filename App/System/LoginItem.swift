@@ -1,3 +1,4 @@
+import BeamCore
 import ServiceManagement
 
 enum LoginItem {
@@ -12,20 +13,27 @@ enum LoginItem {
     }
 
     /// Turns launch-at-login on the first time Beam runs (spec: on by default), and re-points an enabled
-    /// login item at this copy when Beam was moved (e.g. installed into /Applications).
+    /// login item at this copy when Beam was moved (e.g. installed into /Applications). A stray copy run from
+    /// elsewhere never steals a working login item.
     static func applyDefaultOnce() {
         let defaults = UserDefaults.standard
         let firstRunKey = "didSetDefaultLoginItem", pathKey = "loginItemBundlePath"
         let path = Bundle.main.bundlePath
+        let registered = defaults.string(forKey: pathKey)
         do {
             if !defaults.bool(forKey: firstRunKey) {
                 defaults.set(true, forKey: firstRunKey)
                 try set(true)
-            } else if isEnabled, defaults.string(forKey: pathKey) != path {
+                if isEnabled { defaults.set(path, forKey: pathKey) }
+            } else if isEnabled, registered != path,
+                      LoginItemPolicy.shouldRepointLoginItem(
+                          bundlePath: path,
+                          currentTargetExists: registered.map { FileManager.default.fileExists(atPath: $0) } ?? false
+                      ) {
                 try SMAppService.mainApp.unregister()
                 try SMAppService.mainApp.register()
+                defaults.set(path, forKey: pathKey)
             }
-            if isEnabled { defaults.set(path, forKey: pathKey) }
         } catch {
             log.error("Login item: \(error.localizedDescription, privacy: .public)")
         }

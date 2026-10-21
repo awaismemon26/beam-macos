@@ -25,6 +25,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     #endif
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        guard SingleInstance.resolve() else {
+            NSApp.terminate(nil)
+            return
+        }
         settings.applyAppearance()
         installStatusItem()
         settings.onShowInMenuBarChange = { [weak self] visible in self?.statusItem?.isVisible = visible }
