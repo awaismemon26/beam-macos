@@ -28,8 +28,7 @@ enum PanelScreens {
                   let rect = CGRect(dictionaryRepresentation: bounds),
                   !rect.isEmpty
             else { continue }
-            // CG puts the origin at the primary display's top-left; Cocoa at its bottom-left.
-            return CGRect(x: rect.minX, y: primary.frame.height - rect.maxY, width: rect.width, height: rect.height)
+            return ScreenChoice.cocoaRect(fromCG: rect, primaryHeight: primary.frame.height)
         }
         return nil
     }

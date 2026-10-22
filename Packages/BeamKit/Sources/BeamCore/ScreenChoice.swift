@@ -21,8 +21,16 @@ public enum ScreenChoice {
         }
     }
 
+    /// A rectangle from CoreGraphics' space (origin at the primary display's top-left, y down) in Cocoa's
+    /// (origin at its bottom-left, y up). `primaryHeight` is the primary display's height.
+    public static func cocoaRect(fromCG rect: CGRect, primaryHeight: CGFloat) -> CGRect {
+        CGRect(x: rect.minX, y: primaryHeight - rect.maxY, width: rect.width, height: rect.height)
+    }
+
     private static func screenUnderMouse(_ screens: [CGRect], _ mouse: CGPoint) -> Int {
-        screens.firstIndex { $0.contains(mouse) } ?? 0
+        // Cocoa reports the mouse on a display's top row as y == maxY, so the top edge is inclusive (and the
+        // bottom exclusive), as NSMouseInRect(_, _, false) does; CGRect.contains is the other way round.
+        screens.firstIndex { mouse.x >= $0.minX && mouse.x < $0.maxX && mouse.y > $0.minY && mouse.y <= $0.maxY } ?? 0
     }
 
     private static func largestOverlap(_ screens: [CGRect], _ window: CGRect) -> Int? {
