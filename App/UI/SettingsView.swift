@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case general = "General", shortcuts = "Shortcuts", about = "About"
+    case general = "General", shortcuts = "Shortcuts", launcher = "Launcher", calculator = "Calculator", about = "About"
 
     var id: Self { self }
 
@@ -10,6 +10,8 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: "gearshape.fill"
         case .shortcuts: "command"
+        case .launcher: "magnifyingglass"
+        case .calculator: "plus.forwardslash.minus"
         case .about: "info.circle.fill"
         }
     }
@@ -18,12 +20,14 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: .gray
         case .shortcuts: .orange
+        case .launcher: .blue
+        case .calculator: .green
         case .about: .indigo
         }
     }
 }
 
-/// Currency-rate status shown in About; closures keep the view independent of the calculator engine.
+/// Currency-rate status shown in Calculator; closures keep the view independent of the calculator engine.
 struct RatesStatus {
     let lastUpdate: () async -> Date?
     let refresh: () async -> Void
@@ -52,7 +56,9 @@ struct SettingsView: View {
                     switch pane {
                     case .general: GeneralSettings(settings: settings)
                     case .shortcuts: ShortcutsSettings(settings: settings)
-                    case .about: AboutSettings(settings: settings, rates: rates)
+                    case .launcher: LauncherSettings(settings: settings)
+                    case .calculator: CalculatorSettings(settings: settings, rates: rates)
+                    case .about: AboutSettings()
                     }
                 }
                 .padding(.horizontal, 24)
@@ -180,14 +186,10 @@ private struct GeneralSettings: View {
 // MARK: - About
 
 private struct AboutSettings: View {
-    @Bindable var settings: AppSettings
-    let rates: RatesStatus
     @State private var isTrusted = Permissions.isTrusted
-    @State private var ratesUpdated: Date?
-    @State private var refreshing = false
 
     private static let repositoryURL = URL(string: "https://github.com/awaismemon26/beam-macos")!
-    private static let soulverURL = URL(string: "https://soulver.app/core")!
+    private static let issuesURL = URL(string: "https://github.com/awaismemon26/beam-macos/issues/new/choose")!
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -198,7 +200,7 @@ private struct AboutSettings: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Beam").font(.system(size: 22, weight: .semibold))
                     Text("Version \(Self.version)").foregroundStyle(.secondary)
-                    Text("Switch windows, launch apps and calculate, instantly.")
+                    Text("Every window, one keystroke away.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -213,34 +215,16 @@ private struct AboutSettings: View {
                         Button("Open System Settings") { Permissions.openAccessibilitySettings() }
                     }
                 }
-                SettingsDivider()
-                SettingsRow("Currency Rates") {
-                    HStack(spacing: 10) {
-                        Text(ratesUpdated.map { "Updated \($0.formatted(.relative(presentation: .named)))" }
-                             ?? "Built-in rates")
-                            .foregroundStyle(.secondary)
-                        Button(refreshing ? "Refreshing…" : "Refresh") {
-                            refreshing = true
-                            Task {
-                                await rates.refresh()
-                                ratesUpdated = await rates.lastUpdate()
-                                refreshing = false
-                            }
-                        }
-                        .disabled(refreshing)
-                    }
-                }
             }
 
             SettingsSectionHeader("Links")
             SettingsCard {
                 SettingsRow("Source Code") { Link("GitHub", destination: Self.repositoryURL) }
                 SettingsDivider()
-                SettingsRow("Calculator Engine") { Link("SoulverCore", destination: Self.soulverURL) }
+                SettingsRow("Feedback") { Link("Report an issue", destination: Self.issuesURL) }
             }
         }
         .task {
-            ratesUpdated = await rates.lastUpdate()
             while !Task.isCancelled {
                 isTrusted = Permissions.isTrusted
                 try? await Task.sleep(for: .seconds(3))

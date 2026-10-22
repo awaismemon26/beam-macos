@@ -36,12 +36,14 @@ final class WindowSearchModel {
 final class WindowSearchController {
     private let enumerator: WindowEnumerator
     private let activity: WindowActivityMonitor
+    private let settings: AppSettings
     private let model = WindowSearchModel()
     private let panel = BeamPanel(size: Theme.rootSize, acceptsKeyboard: true)
 
-    init(enumerator: WindowEnumerator, activity: WindowActivityMonitor) {
+    init(enumerator: WindowEnumerator, activity: WindowActivityMonitor, settings: AppSettings) {
         self.enumerator = enumerator
         self.activity = activity
+        self.settings = settings
         panel.host(WindowSearchView(
             model: model,
             onMove: { [weak self] delta in self?.move(delta) },
@@ -66,7 +68,7 @@ final class WindowSearchController {
         model.all = activity.mru.ordered(model.all)
         model.resetSelectionToTop()
         model.presentCount += 1
-        panel.present()
+        panel.present(on: PanelScreens.screen(for: settings.panelScreen))
         Signpost.end("windowSearch.open", signpost)
         Task {
             let fresh = await enumerator.allWindows()
@@ -97,6 +99,7 @@ final class WindowSearchController {
             return
         }
         Task {
+            let screen = panel.screen // so a re-present stays where the panel was
             let element = enumerator.axElement(for: window.id)
             guard element != nil else {
                 withAnimation(.linear(duration: 0.3)) { model.shakes += 1 }
@@ -108,7 +111,7 @@ final class WindowSearchController {
                 activity.touch(window.id)
             case .unreachable:
                 // Nothing changed on screen: bring the panel back and say so.
-                panel.present()
+                panel.present(on: screen)
                 withAnimation(.linear(duration: 0.3)) { model.shakes += 1 }
             case .mismatch:
                 break

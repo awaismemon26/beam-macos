@@ -36,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         LoginItem.applyDefaultOnce()
         rootSearch = RootSearchController(
             calculator: calculator,
+            settings: settings,
             openWindowSearch: { [weak self] in self?.windowSearch?.show() },
             openSettings: { [weak self] in self?.openSettings() }
         )
@@ -66,10 +67,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 self?.perform(action)
             }
         }
-        switcher = SwitcherController(enumerator: enumerator, activity: activity) { [weak tap] open in
+        switcher = SwitcherController(enumerator: enumerator, activity: activity, settings: settings) { [weak tap] open in
             tap?.setSwitcherOpen(open)
         }
-        windowSearch = WindowSearchController(enumerator: enumerator, activity: activity)
+        windowSearch = WindowSearchController(enumerator: enumerator, activity: activity, settings: settings)
         settings.onShortcutsChange = { [weak tap] bindings in tap?.setBindings(bindings) }
         if tap.start() {
             eventTap = tap

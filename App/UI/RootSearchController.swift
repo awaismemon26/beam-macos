@@ -51,6 +51,7 @@ final class RootSearchModel {
 @MainActor
 final class RootSearchController {
     private let calculator: CalculatorService
+    private let settings: AppSettings
     private let appIndex = AppIndex()
     private let usage = UsageStore()
     private let model = RootSearchModel()
@@ -62,8 +63,9 @@ final class RootSearchController {
     private var calcResult: CalculationResult?
     private static let rateRefreshInterval: Duration = .seconds(6 * 3600)
 
-    init(calculator: CalculatorService, openWindowSearch: @escaping () -> Void, openSettings: @escaping () -> Void) {
+    init(calculator: CalculatorService, settings: AppSettings, openWindowSearch: @escaping () -> Void, openSettings: @escaping () -> Void) {
         self.calculator = calculator
+        self.settings = settings
         self.openWindowSearch = openWindowSearch
         self.openSettings = openSettings
         panel.host(RootSearchView(
@@ -104,7 +106,7 @@ final class RootSearchController {
         rebuildItems()
         model.selection = 0
         model.presentCount += 1
-        panel.present()
+        panel.present(on: PanelScreens.screen(for: settings.panelScreen))
         Signpost.end("root.open", signpost)
     }
 
@@ -127,7 +129,7 @@ final class RootSearchController {
         Signpost.end("root.query", signpost)
 
         calcTask?.cancel()
-        guard CalculatorGate.looksLikeCalculation(query) else { return }
+        guard settings.showCalculator, CalculatorGate.looksLikeCalculation(query) else { return }
         calcTask = Task { [calculator] in
             let result = await calculator.evaluate(query)
             guard !Task.isCancelled, model.query == query else { return }

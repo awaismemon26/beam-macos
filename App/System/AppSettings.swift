@@ -24,6 +24,8 @@ final class AppSettings {
     private static let legacyRootHotkeyKey = "rootSearchHotkey"
     private static let showInMenuBarKey = "showInMenuBar"
     private static let appearanceKey = "appearance"
+    private static let panelScreenKey = "panelScreen"
+    private static let showCalculatorKey = "showCalculator"
 
     var shortcuts: ShortcutBindings {
         didSet {
@@ -47,6 +49,16 @@ final class AppSettings {
         }
     }
 
+    /// Which display the launcher, window search and switcher open on.
+    var panelScreen: PanelScreen {
+        didSet { UserDefaults.standard.set(panelScreen.rawValue, forKey: Self.panelScreenKey) }
+    }
+
+    /// Whether the launcher evaluates what you type as a calculation.
+    var showCalculator: Bool {
+        didSet { UserDefaults.standard.set(showCalculator, forKey: Self.showCalculatorKey) }
+    }
+
     /// The action whose recorder is listening, if any. One at a time; while it is set no global shortcut fires,
     /// and the real bindings return exactly once, when it goes back to nil.
     var recordingAction: ShortcutAction? {
@@ -67,6 +79,8 @@ final class AppSettings {
         shortcuts = Self.loadShortcuts(defaults)
         showInMenuBar = defaults.object(forKey: Self.showInMenuBarKey) as? Bool ?? true
         appearance = defaults.string(forKey: Self.appearanceKey).flatMap(AppearanceMode.init) ?? .system
+        panelScreen = defaults.string(forKey: Self.panelScreenKey).flatMap(PanelScreen.init) ?? .mouse
+        showCalculator = defaults.object(forKey: Self.showCalculatorKey) as? Bool ?? true
     }
 
     /// Applies the appearance to every Beam window and panel.
