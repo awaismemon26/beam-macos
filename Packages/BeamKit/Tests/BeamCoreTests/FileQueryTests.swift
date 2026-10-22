@@ -1,0 +1,56 @@
+import Foundation
+import Testing
+@testable import BeamCore
+
+@Suite struct FileQueryTests {
+    @Test func fPrefixYieldsTerms() {
+        #expect(FileQuery.prefixedTerms("f awais cv") == "awais cv")
+        #expect(FileQuery.prefixedTerms("f   cv ") == "cv")
+    }
+
+    @Test func bareFIsNotFileQuery() {
+        #expect(FileQuery.prefixedTerms("f") == nil)
+        #expect(FileQuery.prefixedTerms("f ") == nil)
+        #expect(FileQuery.prefixedTerms("f   ") == nil)
+        #expect(FileQuery.prefixedTerms("figma") == nil)
+    }
+
+    @Test func termsSplitOnWhitespace() {
+        #expect(FileQuery.terms("  awais \t cv\n") == ["awais", "cv"])
+        #expect(FileQuery.terms("   ").isEmpty)
+    }
+
+    @Test func predicateHasOneClausePerTermCaseAndDiacriticInsensitive() {
+        let p = FileQuery.predicateFormat(terms: ["awais", "cv"])
+        #expect(p.format.components(separatedBy: "kMDItemFSName LIKE[cd] %@").count == 3)
+        #expect(p.arguments == ["*awais*", "*cv*"])
+        #expect(p.format.contains("&&"))
+    }
+
+    @Test func predicateEscapesWildcardsAndQuotes() {
+        let p = FileQuery.predicateFormat(terms: [#"a*b?"c\"#])
+        #expect(p.arguments == [#"*a\*b\?"c\\*"#])
+    }
+
+    @Test func rankerOrdersByLastUsedThenModifiedThenName() {
+        let d = { (s: TimeInterval) in Date(timeIntervalSince1970: s) }
+        let usedNew = FileResult(path: "/a/z", name: "z", lastUsed: d(300), modified: d(1))
+        let usedOld = FileResult(path: "/a/y", name: "y", lastUsed: d(200), modified: d(900))
+        let modNew = FileResult(path: "/a/x", name: "x", lastUsed: nil, modified: d(500))
+        let modOld = FileResult(path: "/a/w", name: "w", lastUsed: nil, modified: d(400))
+        let nameB = FileResult(path: "/a/b", name: "b", lastUsed: nil, modified: nil)
+        let nameA = FileResult(path: "/a/a", name: "A", lastUsed: nil, modified: nil)
+        let sorted = FileRanker.sorted([nameB, modOld, usedOld, nameA, modNew, usedNew])
+        #expect(sorted == [usedNew, usedOld, modNew, modOld, nameA, nameB])
+    }
+
+    @Test func defaultScopesAreTheFiveFolders() {
+        #expect(FileScopes.defaults(home: "/Users/x") == [
+            "/Users/x/Desktop",
+            "/Users/x/Documents",
+            "/Users/x/Downloads",
+            "/Users/x/Pictures",
+            "/Users/x/Library/Mobile Documents/com~apple~CloudDocs",
+        ])
+    }
+}
