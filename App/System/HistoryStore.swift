@@ -53,13 +53,19 @@ final class HistoryStore {
 
     private func scheduleSave() {
         saveTask?.cancel()
-        let snapshot = File(launcher: launcher.entries, windowSearch: windowSearch.entries)
-        let url = url
-        saveTask = Task {
+        saveTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(1))
             guard !Task.isCancelled else { return }
-            Self.write(snapshot, to: url)
+            self?.flush()
         }
+    }
+
+    /// Writes a pending save now (Beam is quitting).
+    func flush() {
+        guard let saveTask else { return }
+        saveTask.cancel()
+        self.saveTask = nil
+        Self.write(File(launcher: launcher.entries, windowSearch: windowSearch.entries), to: url)
     }
 
     private static func write(_ file: File, to url: URL) {

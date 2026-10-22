@@ -11,29 +11,34 @@ final class BundleStore {
 
     @ObservationIgnored private let url: URL
     @ObservationIgnored private var saveTask: Task<Void, Never>?
+    /// False when an unreadable bundles.json couldn't be moved aside: saving would overwrite it, so this session
+    /// keeps its changes in memory only.
+    @ObservationIgnored private let canSave: Bool
 
     init() {
         let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Beam", isDirectory: true)
         url = directory.appendingPathComponent("bundles.json")
-        bundles = Self.load(from: url)
+        (bundles, canSave) = Self.load(from: url)
     }
 
     /// Reads the saved bundles. A file that exists but can't be used (corrupt, hand-broken, or written by a newer
-    /// Beam) is moved aside rather than left to be overwritten by the next save, so no bundles are lost.
-    private static func load(from url: URL) -> [BeamBundle] {
-        guard FileManager.default.fileExists(atPath: url.path) else { return [] }
+    /// Beam) is moved aside rather than left to be overwritten by the next save, so no bundles are lost. When it
+    /// can't be moved either, saving is off for the session.
+    private static func load(from url: URL) -> (bundles: [BeamBundle], canSave: Bool) {
+        guard FileManager.default.fileExists(atPath: url.path) else { return ([], true) }
         if let data = try? Data(contentsOf: url), let file = BundleFile.decode(data) {
-            return file.withoutSessionRules().bundles
+            return (file.withoutSessionRules().bundles, true)
         }
         let aside = url.appendingPathExtension("corrupt-\(Int(Date().timeIntervalSince1970))")
         do {
             try FileManager.default.moveItem(at: url, to: aside)
             log.error("bundles.json couldn't be read; kept it as \(aside.lastPathComponent, privacy: .public)")
+            return ([], true)
         } catch {
-            log.error("bundles.json couldn't be read or moved aside: \(error.localizedDescription, privacy: .public)")
+            log.error("bundles.json couldn't be read or moved aside; bundles won't be saved this session: \(error.localizedDescription, privacy: .public)")
+            return ([], false)
         }
-        return []
     }
 
     func bundle(_ id: UUID) -> BeamBundle? {
@@ -96,20 +101,28 @@ final class BundleStore {
 
     private func scheduleSave() {
         saveTask?.cancel()
-        // This-session rules stay in memory only.
-        let snapshot = BundleFile(bundles: bundles).withoutSessionRules()
-        let url = url
-        saveTask = Task {
+        saveTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(1))
             guard !Task.isCancelled else { return }
-            do {
-                try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-                let encoder = JSONEncoder()
-                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-                try encoder.encode(snapshot).write(to: url, options: .atomic)
-            } catch {
-                log.error("Saving bundles failed: \(error.localizedDescription, privacy: .public)")
-            }
+            self?.flush()
+        }
+    }
+
+    /// Writes pending changes now (also called when Beam quits, so the last second of edits isn't lost).
+    func flush() {
+        guard let saveTask else { return }
+        saveTask.cancel()
+        self.saveTask = nil
+        guard canSave else { return }
+        // This-session rules stay in memory only.
+        let snapshot = BundleFile(bundles: bundles).withoutSessionRules()
+        do {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            try encoder.encode(snapshot).write(to: url, options: .atomic)
+        } catch {
+            log.error("Saving bundles failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let settings = AppSettings()
     let calculator = CalculatorService()
     private let history = HistoryStore()
+    private let bundles = BundleStore()
     private var settingsWindow: NSWindow?
     private var settingsCloseToken: NSObjectProtocol?
 
@@ -50,6 +51,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         } else {
             showOnboarding()
         }
+    }
+
+    /// Debounced saves still waiting are written before Beam exits.
+    func applicationWillTerminate(_ notification: Notification) {
+        bundles.flush()
+        history.flush()
+        rootSearch?.flush()
     }
 
     /// Everything that needs Accessibility access.

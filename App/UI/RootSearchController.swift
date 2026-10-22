@@ -146,6 +146,11 @@ final class RootSearchController {
         setMode(.files)
     }
 
+    /// Writes pending usage counts (Beam is quitting).
+    func flush() {
+        usage.flush()
+    }
+
     func dismiss() {
         calcTask?.cancel()
         fileSearcher.cancel() // a live query keeps watching the disk
