@@ -7,6 +7,8 @@ struct SearchField: View {
     /// Changing this value focuses the field (bumped every time the panel is shown).
     let focusTrigger: Int
     let onMove: (Int) -> Void
+    /// ↑/↓ only (not Tab): offered first, for history recall; returns whether it used the key.
+    var onRecall: ((Int) -> Bool)?
     let onSubmit: () -> Void
     let onCancel: () -> Void
     var onCommandComma: (() -> Void)?
@@ -22,8 +24,8 @@ struct SearchField: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 20))
                 .focused($focused)
-                .onKeyPress(.downArrow) { onMove(1); return .handled }
-                .onKeyPress(.upArrow) { onMove(-1); return .handled }
+                .onKeyPress(.downArrow) { arrow(1); return .handled }
+                .onKeyPress(.upArrow) { arrow(-1); return .handled }
                 .onKeyPress(keys: [.tab]) { press in
                     onMove(press.modifiers.contains(.shift) ? -1 : 1)
                     return .handled
@@ -39,5 +41,10 @@ struct SearchField: View {
         .padding(.horizontal, 18)
         .frame(height: 56)
         .onChange(of: focusTrigger, initial: true) { focused = true }
+    }
+
+    private func arrow(_ delta: Int) {
+        if onRecall?(delta) == true { return }
+        onMove(delta)
     }
 }

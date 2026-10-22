@@ -63,6 +63,7 @@ final class WindowSearchController {
         panel.host(WindowSearchView(
             model: model,
             onMove: { [weak self] delta in self?.move(delta) },
+            onRecall: { [weak self] delta in self?.recallHistory(delta) ?? false },
             onSubmit: { [weak self] in self?.activateSelection() },
             onCancel: { [weak self] in self?.dismiss() },
             onActivate: { [weak self] index in self?.activate(index) }
@@ -110,7 +111,6 @@ final class WindowSearchController {
     }
 
     private func move(_ delta: Int) {
-        if recallHistory(delta) { return }
         let count = model.results.count
         guard count > 0 else { return }
         withAnimation(Theme.spring) { model.selection = (model.selection + delta + count) % count }

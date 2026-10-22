@@ -77,6 +77,7 @@ final class RootSearchController {
             model: model,
             onQueryChange: { [weak self] in self?.queryChanged() },
             onMove: { [weak self] delta in self?.move(delta) },
+            onRecall: { [weak self] delta in self?.recallHistory(delta) ?? false },
             onSubmit: { [weak self] in self?.activate(self?.model.selection ?? 0) },
             onCancel: { [weak self] in self?.dismiss() },
             onActivate: { [weak self] index in self?.activate(index) },
@@ -206,7 +207,6 @@ final class RootSearchController {
     }
 
     private func move(_ delta: Int) {
-        if recallHistory(delta) { return }
         let count = model.items.count
         guard count > 0 else { return }
         withAnimation(Theme.spring) { model.selection = (model.selection + delta + count) % count }

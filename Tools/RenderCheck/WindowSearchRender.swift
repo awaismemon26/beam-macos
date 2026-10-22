@@ -30,7 +30,7 @@ for (i, app) in apps.enumerated() {
 
     func start() {
         model.all = windows
-        let view = WindowSearchView(model: model, onMove: { _ in }, onSubmit: {}, onCancel: {}, onActivate: { _ in })
+        let view = WindowSearchView(model: model, onMove: { _ in }, onRecall: { _ in false }, onSubmit: {}, onCancel: {}, onActivate: { _ in })
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 460), styleMask: [.borderless], backing: .buffered, defer: false)
         window.alphaValue = 0.01 // invisible to the user, still laid out and drawn
         window.contentView = NSHostingView(rootView: view)

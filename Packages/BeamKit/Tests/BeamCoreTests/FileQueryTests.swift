@@ -15,6 +15,10 @@ import Testing
         #expect(FileQuery.prefixedTerms("figma") == nil)
     }
 
+    @Test func onlyLowercaseFIsThePrefix() {
+        #expect(FileQuery.prefixedTerms("F cv") == nil)
+    }
+
     @Test func termsSplitOnWhitespace() {
         #expect(FileQuery.terms("  awais \t cv\n") == ["awais", "cv"])
         #expect(FileQuery.terms("   ").isEmpty)
@@ -27,9 +31,10 @@ import Testing
         #expect(p.format.contains("&&"))
     }
 
+    /// Only `*` and `\` are special in Spotlight's LIKE; `?` is a literal character there and stays unescaped.
     @Test func predicateEscapesWildcardsAndQuotes() {
         let p = FileQuery.predicateFormat(terms: [#"a*b?"c\"#])
-        #expect(p.arguments == [#"*a\*b\?"c\\*"#])
+        #expect(p.arguments == [#"*a\*b?"c\\*"#])
     }
 
     @Test func rankerOrdersByLastUsedThenModifiedThenName() {

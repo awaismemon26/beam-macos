@@ -3,8 +3,9 @@ import Foundation
 /// Turns launcher text into a Spotlight file-name query.
 public enum FileQuery {
     /// The text after `f ` when it has at least one non-space character; nil for a plain `f` or a word like `figma`.
+    /// Lowercase `f` only.
     public static func prefixedTerms(_ launcherQuery: String) -> String? {
-        guard let first = launcherQuery.first, first == "f" || first == "F" else { return nil }
+        guard launcherQuery.first == "f" else { return nil }
         let rest = launcherQuery.dropFirst()
         guard let separator = rest.first, separator.isWhitespace else { return nil }
         let text = rest.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -17,13 +18,14 @@ public enum FileQuery {
     }
 
     /// One `kMDItemFSName LIKE[cd] %@` clause per term, joined by `&&`: every word must appear in the file name,
-    /// ignoring case and diacritics. Arguments are `*term*` with LIKE wildcards (`*`, `?`) and `\` escaped.
+    /// ignoring case and diacritics. Arguments are `*term*` with `*` and `\` escaped; Spotlight's LIKE has no
+    /// `?` wildcard, so `?` stays literal (escaping it would make such names unfindable).
     public static func predicateFormat(terms: [String]) -> (format: String, arguments: [String]) {
         let format = terms.map { _ in "kMDItemFSName LIKE[cd] %@" }.joined(separator: " && ")
         let arguments = terms.map { term -> String in
             var escaped = ""
             for character in term {
-                if character == "\\" || character == "*" || character == "?" { escaped.append("\\") }
+                if character == "\\" || character == "*" { escaped.append("\\") }
                 escaped.append(character)
             }
             return "*\(escaped)*"

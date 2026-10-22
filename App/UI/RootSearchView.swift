@@ -5,6 +5,7 @@ struct RootSearchView: View {
     @Bindable var model: RootSearchModel
     let onQueryChange: () -> Void
     let onMove: (Int) -> Void
+    let onRecall: (Int) -> Bool
     let onSubmit: () -> Void
     let onCancel: () -> Void
     let onActivate: (Int) -> Void
@@ -14,7 +15,7 @@ struct RootSearchView: View {
         VStack(spacing: 0) {
             SearchField(
                 text: $model.query, placeholder: "Search apps or calculate…", focusTrigger: model.presentCount,
-                onMove: onMove, onSubmit: onSubmit, onCancel: onCancel, onCommandComma: onSettings
+                onMove: onMove, onRecall: onRecall, onSubmit: onSubmit, onCancel: onCancel, onCommandComma: onSettings
             )
             .onChange(of: model.query) { onQueryChange() }
             Divider().opacity(0.4)

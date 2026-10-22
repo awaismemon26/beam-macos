@@ -8,6 +8,8 @@ final class FileSearcher {
     private var query: NSMetadataQuery?
     private var observers: [NSObjectProtocol] = []
     private var onResults: (([FileResult]) -> Void)?
+    /// Bumped per search; observers deliver only while theirs is current.
+    private var generation = 0
 
     /// Replaces any running search. `onResults` is called on the main actor with the best `limit` matches,
     /// again each time Spotlight reports more. No terms → `[]` and no query.
@@ -26,12 +28,18 @@ final class FileSearcher {
             NSSortDescriptor(key: NSMetadataItemFSContentChangeDateKey, ascending: false),
         ]
         query.notificationBatchingInterval = 0.1
+        generation &+= 1
+        let generation = generation
         self.query = query
         self.onResults = onResults
         let center = NotificationCenter.default
         for name in [NSNotification.Name.NSMetadataQueryDidFinishGathering, .NSMetadataQueryDidUpdate] {
+            // A notification already queued for a superseded query must not reach this search.
             observers.append(center.addObserver(forName: name, object: query, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.deliver(limit: limit) }
+                MainActor.assumeIsolated {
+                    guard let self, generation == self.generation else { return }
+                    self.deliver(limit: limit)
+                }
             })
         }
         query.start()
@@ -49,7 +57,6 @@ final class FileSearcher {
     private func deliver(limit: Int) {
         guard let query, let onResults else { return }
         query.disableUpdates()
-        defer { query.enableUpdates() }
         let count = min(query.resultCount, limit)
         var results: [FileResult] = []
         results.reserveCapacity(count)
@@ -64,6 +71,8 @@ final class FileSearcher {
                 lastUsed: item.value(forAttribute: NSMetadataItemLastUsedDateKey) as? Date,
                 modified: item.value(forAttribute: NSMetadataItemFSContentChangeDateKey) as? Date))
         }
+        query.enableUpdates()
+        // Outside the disable/enable bracket: the callback may start a new search.
         onResults(FileRanker.sorted(results))
     }
 }

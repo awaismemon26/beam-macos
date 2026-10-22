@@ -4,6 +4,7 @@ import SwiftUI
 struct WindowSearchView: View {
     @Bindable var model: WindowSearchModel
     let onMove: (Int) -> Void
+    let onRecall: (Int) -> Bool
     let onSubmit: () -> Void
     let onCancel: () -> Void
     let onActivate: (Int) -> Void
@@ -12,7 +13,7 @@ struct WindowSearchView: View {
         VStack(spacing: 0) {
             SearchField(
                 text: $model.query, placeholder: "Search windows by app or title…", focusTrigger: model.presentCount,
-                onMove: onMove, onSubmit: onSubmit, onCancel: onCancel
+                onMove: onMove, onRecall: onRecall, onSubmit: onSubmit, onCancel: onCancel
             )
             Divider().opacity(0.4)
             results

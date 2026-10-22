@@ -42,10 +42,13 @@ final class HistoryStore {
         scheduleSave()
     }
 
+    /// A privacy action: written to disk right away, not after the save delay.
     func clearAll() {
         launcher.clear()
         windowSearch.clear()
-        scheduleSave()
+        saveTask?.cancel()
+        saveTask = nil
+        Self.write(File(launcher: launcher.entries, windowSearch: windowSearch.entries), to: url)
     }
 
     private func scheduleSave() {
@@ -55,12 +58,16 @@ final class HistoryStore {
         saveTask = Task {
             try? await Task.sleep(for: .seconds(1))
             guard !Task.isCancelled else { return }
-            do {
-                try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try JSONEncoder().encode(snapshot).write(to: url, options: .atomic)
-            } catch {
-                log.error("Saving history failed: \(error.localizedDescription, privacy: .public)")
-            }
+            Self.write(snapshot, to: url)
+        }
+    }
+
+    private static func write(_ file: File, to url: URL) {
+        do {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try JSONEncoder().encode(file).write(to: url, options: .atomic)
+        } catch {
+            log.error("Saving history failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 }
