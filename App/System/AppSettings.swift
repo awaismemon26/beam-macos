@@ -47,6 +47,15 @@ final class AppSettings {
         }
     }
 
+    /// The action whose recorder is listening, if any. One at a time; while it is set no global shortcut fires,
+    /// and the real bindings return exactly once, when it goes back to nil.
+    var recordingAction: ShortcutAction? {
+        didSet {
+            guard (oldValue == nil) != (recordingAction == nil) else { return }
+            onShortcutsChange?(recordingAction == nil ? shortcuts : .disabled)
+        }
+    }
+
     /// Called with the bindings the event tap should use (`.disabled` while recording a new one).
     var onShortcutsChange: ((ShortcutBindings) -> Void)?
     /// Called with the saved bindings after every edit (not while recording), for anything that displays them.
@@ -63,11 +72,6 @@ final class AppSettings {
     /// Applies the appearance to every Beam window and panel.
     func applyAppearance() {
         NSApp.appearance = appearance.nsAppearance
-    }
-
-    /// While the recorder listens, no shortcut may fire.
-    func setRecording(_ recording: Bool) {
-        onShortcutsChange?(recording ? .disabled : shortcuts)
     }
 
     private static func loadShortcuts(_ defaults: UserDefaults) -> ShortcutBindings {

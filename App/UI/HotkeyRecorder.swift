@@ -6,11 +6,11 @@ import SwiftUI
 struct HotkeyRecorder: View {
     let action: ShortcutAction
     @Bindable var settings: AppSettings
-    @State private var isRecording = false
     @State private var monitor: Any?
     /// Why the last attempt was refused; the next attempt clears it.
     @State private var rejection: ShortcutIssue?
 
+    private var isRecording: Bool { settings.recordingAction == action }
     private var combo: KeyCombo? { settings.shortcuts[action] }
     private var canClear: Bool {
         ShortcutValidator.canClear(action, in: settings.shortcuts, menuBarIconShown: settings.showInMenuBar)
@@ -60,6 +60,13 @@ struct HotkeyRecorder: View {
             }
         }
         .onDisappear { stop() }
+        // Starting another recorder ends this one: only one monitor may listen.
+        .onChange(of: settings.recordingAction) { _, recording in
+            if recording != action { removeMonitor() }
+        }
+        // Switching away (another app, another window) ends recording, or the global shortcuts would stay off.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in stop() }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in stop() }
     }
 
     private func iconButton(_ name: String, help: String, enabled: Bool, action: @escaping () -> Void) -> some View {
@@ -88,8 +95,8 @@ struct HotkeyRecorder: View {
 
     private func start() {
         rejection = nil
-        isRecording = true
-        settings.setRecording(true)
+        removeMonitor()
+        settings.recordingAction = action
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             if event.keyCode == KeyCode.escape {
                 stop()
@@ -103,10 +110,13 @@ struct HotkeyRecorder: View {
     }
 
     private func stop() {
+        removeMonitor()
+        if isRecording { settings.recordingAction = nil }
+    }
+
+    private func removeMonitor() {
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
-        if isRecording { settings.setRecording(false) }
-        isRecording = false
     }
 }
 
