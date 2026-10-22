@@ -68,4 +68,34 @@ import Testing
         #expect(r.items.isEmpty)
         #expect(r.selection == 0)
     }
+
+    @Test func countTextNamesOpenWindowsAndOnlyNonzeroFiles() {
+        func text(_ windows: Int, _ files: Int) -> String {
+            BundleSummary(id: UUID(), name: "x", openWindows: windows, files: files).countText
+        }
+        #expect(text(4, 0) == "4 windows")
+        #expect(text(1, 0) == "1 window")
+        #expect(text(0, 0) == "no open windows")
+        #expect(text(4, 2) == "4 windows, 2 files")
+        #expect(text(0, 1) == "no open windows, 1 file")
+    }
+
+    @Test func pickerListsAllBundlesThenANewBundleRow() {
+        let rows = BundleSearch.pickerRows(bundles: [flagsmith, jobs], query: "")
+        #expect(rows == [.bundle(flagsmith), .bundle(jobs), .newBundle(name: "")])
+    }
+
+    @Test func pickerFiltersByNameAndOffersTheTypedNameAsANewBundle() {
+        #expect(BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: "flag") == [.bundle(flagsmith), .newBundle(name: "flag")])
+        #expect(BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: " beam  ") == [.newBundle(name: "beam")])
+    }
+
+    @Test func pickerOffersNoNewBundleWhenTheNameExists() {
+        #expect(BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: "FlagSmith") == [.bundle(flagsmith)])
+    }
+
+    @Test func pickerRowIDsAreDistinct() {
+        let rows = BundleSearch.pickerRows(bundles: [flagsmith, jobs], query: "")
+        #expect(Set(rows.map(\.id)).count == rows.count)
+    }
 }

@@ -224,7 +224,8 @@ func run() async {
 
     // Window search (Option+Tab).
     let search = WindowSearchModel()
-    let searchView = WindowSearchView(model: search, onMove: { _ in }, onRecall: { _ in false }, onSubmit: {}, onCancel: {}, onActivate: { _ in })
+    let searchView = WindowSearchView(model: search, onMove: { _ in }, onRecall: { _ in false }, onSubmit: {}, onCancel: {}, onActivate: { _ in },
+                                      onKey: { _ in false }, onBack: {})
     let searchRenderer = PanelRenderer(PanelChrome { searchView }, size: Theme.rootSize)
     search.all = allWindows
     func searchFrame(_ query: String, _ seconds: Double) async {

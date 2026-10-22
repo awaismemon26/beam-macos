@@ -81,7 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             tap?.setSwitcherOpen(open)
         }
         windowSearch = WindowSearchController(
-            enumerator: enumerator, activity: activity, settings: settings, history: history)
+            enumerator: enumerator, activity: activity, settings: settings, history: history, bundles: bundles)
         settings.onShortcutsChange = { [weak tap] bindings in tap?.setBindings(bindings) }
         if tap.start() {
             eventTap = tap

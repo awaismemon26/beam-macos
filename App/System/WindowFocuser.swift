@@ -53,6 +53,26 @@ enum WindowFocuser {
         return .mismatch
     }
 
+    /// Brings a bundle's windows forward without moving any between Desktops (macOS has no reliable way to):
+    /// un-minimizes each one and raises it on whatever Desktop it is on, least recently used first, then focuses
+    /// `last` — the most recently used — which switches to its Desktop.
+    @discardableResult
+    static func bringForward(
+        _ windows: [WindowInfo], focusing last: WindowInfo, elements: @Sendable (CGWindowID) -> AXRef?
+    ) async -> FocusResult {
+        for window in windows.reversed() where window.id != last.id && window.isReachable {
+            guard let ax = elements(window.id)?.element else { continue }
+            if window.isMinimized {
+                AXUIElementSetAttributeValue(ax, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+            }
+            if let app = NSRunningApplication(processIdentifier: window.pid), app.isHidden {
+                app.unhide()
+            }
+            AXUIElementPerformAction(ax, kAXRaiseAction as CFString)
+        }
+        return await focus(last, element: elements(last.id))
+    }
+
     /// Two synthetic event records (0x01 then 0x02) that tell the WindowServer to make `windowID` key.
     private static func makeKeyWindow(
         psn: inout ProcessSerialNumber, windowID: CGWindowID, post: PrivateAPIs.PostEventRecordTo

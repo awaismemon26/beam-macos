@@ -89,6 +89,15 @@ final class BundleStore {
         update(id) { $0.savedSearches.removeAll { $0 == query } }
     }
 
+    /// Adds what ⌘ G was pressed on: a window becomes a rule (`BundleMatcher.rule(for:)`).
+    func add(_ target: PickerTarget, to id: UUID) {
+        switch target {
+        case let .window(window): add(BundleMatcher.rule(for: window), to: id)
+        case let .file(path): addFile(path, to: id)
+        case let .savedSearch(query): addSavedSearch(query, to: id)
+        }
+    }
+
     /// Replaces one bundle's rules (the Settings rule editor edits the whole list).
     func setRules(_ rules: [BundleRule], for id: UUID) {
         update(id) { $0.rules = rules }

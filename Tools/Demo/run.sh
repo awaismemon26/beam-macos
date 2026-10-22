@@ -11,7 +11,7 @@ strip() { sed -e 's/^import BeamCore$//' -e 's/^import BeamCalc$//' "$1"; }
 models() { strip "$1" | awk -v marker="$2" 'index($0, marker) == 1 {exit} {print}'; }
 
 for f in "$ROOT"/Packages/BeamKit/Sources/BeamCore/*.swift; do strip "$f" > "$WORK/core_$(basename "$f")"; done
-for f in RootSearchView WindowSearchView SwitcherView SearchField ResultRow WindowRow FileRow; do strip "$ROOT/App/UI/$f.swift" > "$WORK/$f.swift"; done
+for f in RootSearchView WindowSearchView SwitcherView SearchField ResultRow WindowRow BundleRow BundlePicker FileRow; do strip "$ROOT/App/UI/$f.swift" > "$WORK/$f.swift"; done
 models "$ROOT/App/UI/RootSearchController.swift" "/// Option+Space" > "$WORK/RootModels.swift"
 models "$ROOT/App/UI/SwitcherController.swift" "/// The Ctrl+Tab panel" > "$WORK/SwitcherModels.swift"
 models "$ROOT/App/UI/WindowSearchController.swift" "/// Option+Tab" \

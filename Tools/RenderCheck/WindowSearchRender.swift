@@ -30,7 +30,8 @@ for (i, app) in apps.enumerated() {
 
     func start() {
         model.all = windows
-        let view = WindowSearchView(model: model, onMove: { _ in }, onRecall: { _ in false }, onSubmit: {}, onCancel: {}, onActivate: { _ in })
+        let view = WindowSearchView(model: model, onMove: { _ in }, onRecall: { _ in false }, onSubmit: {}, onCancel: {}, onActivate: { _ in },
+                                    onKey: { _ in false }, onBack: {})
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 460), styleMask: [.borderless], backing: .buffered, defer: false)
         window.alphaValue = 0.01 // invisible to the user, still laid out and drawn
         window.contentView = NSHostingView(rootView: view)
@@ -48,7 +49,7 @@ for (i, app) in apps.enumerated() {
                 let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds)!
                 view.cacheDisplay(in: view.bounds, to: rep)
                 try! rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: CommandLine.arguments[1]))
-                print("model results:", model.results.map(\.title))
+                print("model results:", model.results.map(\.id))
                 exit(0)
             }
         }

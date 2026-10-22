@@ -14,6 +14,30 @@ public struct BundleSummary: Hashable, Sendable {
         self.openWindows = openWindows
         self.files = files
     }
+
+    /// The grey text after the name: "4 windows", "1 window" or "no open windows", plus ", 2 files" when it has any.
+    public var countText: String {
+        let windows = switch openWindows {
+        case 0: "no open windows"
+        case 1: "1 window"
+        default: "\(openWindows) windows"
+        }
+        guard files > 0 else { return windows }
+        return windows + (files == 1 ? ", 1 file" : ", \(files) files")
+    }
+}
+
+/// A row of the ⌘ G bundle picker: an existing bundle, or a new one named by what was typed.
+public enum BundlePickerRow: Identifiable, Hashable, Sendable {
+    case bundle(BundleSummary)
+    case newBundle(name: String)
+
+    public var id: String {
+        switch self {
+        case .bundle(let bundle): "bundle-\(bundle.id.uuidString)"
+        case .newBundle: "new-bundle"
+        }
+    }
 }
 
 public enum WindowSearchItem: Identifiable, Hashable, Sendable {
@@ -50,5 +74,25 @@ public enum BundleSearch {
         guard let topBundle = bundleHits.first else { return (items, 0) }
         guard let bestWindowTier = windowHits.map(\.match.tier).max(), topBundle.match.tier <= bestWindowTier else { return (items, 0) }
         return (items, bundleHits.count)
+    }
+
+    /// The ⌘ G picker: bundles whose names match `query` (best first, all of them for an empty query), then a
+    /// "New bundle" row named by the trimmed query — left out when a bundle already has exactly that name.
+    public static func pickerRows(bundles: [BundleSummary], query: String) -> [BundlePickerRow] {
+        let name = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let q = FuzzyMatcher.normalize(query)
+        let matching: [BundleSummary]
+        if q.isEmpty {
+            matching = bundles
+        } else {
+            let prepared = PreparedQuery(q)
+            matching = bundles.enumerated()
+                .compactMap { offset, bundle in FuzzyMatcher.match(prepared, in: bundle.name).map { (offset, $0, bundle) } }
+                .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0 < $1.0 }
+                .map(\.2)
+        }
+        let rows = matching.map(BundlePickerRow.bundle)
+        let exists = !name.isEmpty && bundles.contains { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+        return exists ? rows : rows + [.newBundle(name: name)]
     }
 }
