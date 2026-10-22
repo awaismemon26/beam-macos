@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     let settings = AppSettings()
     let calculator = CalculatorService()
+    private let history = HistoryStore()
     private var settingsWindow: NSWindow?
     private var settingsCloseToken: NSObjectProtocol?
 
@@ -37,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         rootSearch = RootSearchController(
             calculator: calculator,
             settings: settings,
+            history: history,
             openWindowSearch: { [weak self] in self?.windowSearch?.show() },
             openSettings: { [weak self] in self?.openSettings() }
         )
@@ -70,7 +72,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         switcher = SwitcherController(enumerator: enumerator, activity: activity, settings: settings) { [weak tap] open in
             tap?.setSwitcherOpen(open)
         }
-        windowSearch = WindowSearchController(enumerator: enumerator, activity: activity, settings: settings)
+        windowSearch = WindowSearchController(
+            enumerator: enumerator, activity: activity, settings: settings, history: history)
         settings.onShortcutsChange = { [weak tap] bindings in tap?.setBindings(bindings) }
         if tap.start() {
             eventTap = tap
@@ -183,7 +186,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 lastUpdate: { await calculator.lastRatesUpdate },
                 refresh: { await calculator.refreshRates() }
             )
-            window.contentView = NSHostingView(rootView: SettingsView(settings: settings, rates: rates))
+            window.contentView = NSHostingView(rootView: SettingsView(settings: settings, history: history, rates: rates))
             window.center()
             // Drop the content on close so its views disappear: that ends hotkey recording and status polling.
             settingsCloseToken = NotificationCenter.default.addObserver(

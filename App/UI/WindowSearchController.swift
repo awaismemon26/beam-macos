@@ -4,12 +4,19 @@ import SwiftUI
 
 @MainActor @Observable
 final class WindowSearchModel {
-    var query = "" { didSet { rerank(); selection = 0 } }
+    var query = "" {
+        didSet {
+            if !isRecalling { navigator.reset() } // a user edit ends browsing
+            rerank(); selection = 0
+        }
+    }
     var all: [WindowInfo] = [] { didSet { rerank() } }
     private(set) var results: [WindowInfo] = []
     var selection = 0
     var shakes = 0
     var presentCount = 0
+    var navigator = HistoryNavigator()
+    private var isRecalling = false
     /// Filled while rows render, so it must not be observed (a write would re-render, forever when an
     /// app has no icon). Misses are cached too.
     @ObservationIgnored private var icons: [pid_t: NSImage?] = [:]
@@ -28,6 +35,13 @@ final class WindowSearchModel {
         selection = selectedID.flatMap { id in results.firstIndex { $0.id == id } } ?? 0
     }
 
+    /// Sets the query from history recall; unlike a user edit, it does not end browsing.
+    func recall(_ text: String) {
+        isRecalling = true
+        query = text
+        isRecalling = false
+    }
+
     func resetSelectionToTop() { selection = 0 }
 }
 
@@ -37,13 +51,15 @@ final class WindowSearchController {
     private let enumerator: WindowEnumerator
     private let activity: WindowActivityMonitor
     private let settings: AppSettings
+    private let history: HistoryStore
     private let model = WindowSearchModel()
     private let panel = BeamPanel(size: Theme.rootSize, acceptsKeyboard: true)
 
-    init(enumerator: WindowEnumerator, activity: WindowActivityMonitor, settings: AppSettings) {
+    init(enumerator: WindowEnumerator, activity: WindowActivityMonitor, settings: AppSettings, history: HistoryStore) {
         self.enumerator = enumerator
         self.activity = activity
         self.settings = settings
+        self.history = history
         panel.host(WindowSearchView(
             model: model,
             onMove: { [weak self] delta in self?.move(delta) },
@@ -60,6 +76,7 @@ final class WindowSearchController {
     func show() {
         guard !panel.isVisible else { return }
         let signpost = Signpost.begin("windowSearch.open")
+        model.navigator.reset()
         model.query = ""
         Task {
             let cached = await enumerator.cachedWindows()
@@ -80,7 +97,20 @@ final class WindowSearchController {
         panel.dismiss()
     }
 
+    /// ↑ on an empty field, and ↑/↓ while browsing, step through history instead of the results.
+    /// Returns whether the key was used.
+    private func recallHistory(_ delta: Int) -> Bool {
+        let browsing = model.navigator.isBrowsing
+        guard browsing || (delta < 0 && model.query.isEmpty) else { return false }
+        let recalled = delta < 0
+            ? model.navigator.older(in: history.windowSearch, fieldIsEmpty: model.query.isEmpty)
+            : model.navigator.newer(in: history.windowSearch)
+        if let recalled { model.recall(recalled) }
+        return browsing || recalled != nil
+    }
+
     private func move(_ delta: Int) {
+        if recallHistory(delta) { return }
         let count = model.results.count
         guard count > 0 else { return }
         withAnimation(Theme.spring) { model.selection = (model.selection + delta + count) % count }
@@ -105,6 +135,7 @@ final class WindowSearchController {
                 withAnimation(.linear(duration: 0.3)) { model.shakes += 1 }
                 return
             }
+            history.record(model.query, in: .windowSearch)
             panel.dismiss()
             switch await WindowFocuser.focus(window, element: element) {
             case .focused:

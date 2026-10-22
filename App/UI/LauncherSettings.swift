@@ -4,6 +4,7 @@ import SwiftUI
 /// Where the panels open and the recent searches kept for ↑.
 struct LauncherSettings: View {
     @Bindable var settings: AppSettings
+    let history: HistoryStore
 
     private static let screenTitles: [(PanelScreen, String)] = [
         (.mouse, "Screen containing mouse"),
@@ -23,8 +24,7 @@ struct LauncherSettings: View {
                 }
                 SettingsDivider()
                 SettingsRow("Search History", footnote: "Clears recent searches restored with ↑ in the launcher and window search.") {
-                    // Wired once search history exists.
-                    Button("Clear") {}.disabled(true)
+                    Button("Clear") { history.clearAll() }
                 }
             }
         }

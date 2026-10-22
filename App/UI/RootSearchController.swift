@@ -52,6 +52,7 @@ final class RootSearchModel {
 final class RootSearchController {
     private let calculator: CalculatorService
     private let settings: AppSettings
+    private let history: HistoryStore
     private let appIndex = AppIndex()
     private let usage = UsageStore()
     private let model = RootSearchModel()
@@ -61,11 +62,15 @@ final class RootSearchController {
     private var apps: [AppEntry] = []
     private var calcTask: Task<Void, Never>?
     private var calcResult: CalculationResult?
+    private var navigator = HistoryNavigator()
+    /// The query set by ↑/↓ recall, so the change it causes is not mistaken for typing.
+    private var recalledQuery: String?
     private static let rateRefreshInterval: Duration = .seconds(6 * 3600)
 
-    init(calculator: CalculatorService, settings: AppSettings, openWindowSearch: @escaping () -> Void, openSettings: @escaping () -> Void) {
+    init(calculator: CalculatorService, settings: AppSettings, history: HistoryStore, openWindowSearch: @escaping () -> Void, openSettings: @escaping () -> Void) {
         self.calculator = calculator
         self.settings = settings
+        self.history = history
         self.openWindowSearch = openWindowSearch
         self.openSettings = openSettings
         panel.host(RootSearchView(
@@ -100,6 +105,8 @@ final class RootSearchController {
 
     func show() {
         let signpost = Signpost.begin("root.open")
+        navigator.reset()
+        recalledQuery = nil
         model.query = ""
         model.showsCopied = false
         calcResult = nil
@@ -123,6 +130,11 @@ final class RootSearchController {
     private func queryChanged() {
         let signpost = Signpost.begin("root.query")
         let query = model.query
+        if query == recalledQuery {
+            recalledQuery = nil
+        } else {
+            navigator.reset() // a user edit ends browsing
+        }
         calcResult = nil
         rebuildItems()
         model.selection = 0
@@ -178,7 +190,23 @@ final class RootSearchController {
         }
     }
 
+    /// ↑ on an empty field, and ↑/↓ while browsing, step through history instead of the results.
+    /// Returns whether the key was used.
+    private func recallHistory(_ delta: Int) -> Bool {
+        let browsing = navigator.isBrowsing
+        guard browsing || (delta < 0 && model.query.isEmpty) else { return false }
+        let recalled = delta < 0
+            ? navigator.older(in: history.launcher, fieldIsEmpty: model.query.isEmpty)
+            : navigator.newer(in: history.launcher)
+        if let recalled, recalled != model.query {
+            recalledQuery = recalled
+            model.query = recalled
+        }
+        return browsing || recalled != nil
+    }
+
     private func move(_ delta: Int) {
+        if recallHistory(delta) { return }
         let count = model.items.count
         guard count > 0 else { return }
         withAnimation(Theme.spring) { model.selection = (model.selection + delta + count) % count }
@@ -186,6 +214,7 @@ final class RootSearchController {
 
     private func activate(_ index: Int) {
         guard model.items.indices.contains(index) else { return }
+        history.record(model.query, in: .launcher)
         switch model.items[index] {
         case let .calculation(result):
             NSPasteboard.general.clearContents()

@@ -36,11 +36,13 @@ struct RatesStatus {
 /// Raycast-style settings: a sidebar of panes, each a column of grouped cards.
 struct SettingsView: View {
     @Bindable var settings: AppSettings
+    let history: HistoryStore
     let rates: RatesStatus
     @State private var pane: SettingsPane
 
-    init(settings: AppSettings, rates: RatesStatus, initialPane: SettingsPane = .general) {
+    init(settings: AppSettings, history: HistoryStore, rates: RatesStatus, initialPane: SettingsPane = .general) {
         self.settings = settings
+        self.history = history
         self.rates = rates
         _pane = State(initialValue: initialPane)
     }
@@ -56,7 +58,7 @@ struct SettingsView: View {
                     switch pane {
                     case .general: GeneralSettings(settings: settings)
                     case .shortcuts: ShortcutsSettings(settings: settings)
-                    case .launcher: LauncherSettings(settings: settings)
+                    case .launcher: LauncherSettings(settings: settings, history: history)
                     case .calculator: CalculatorSettings(settings: settings, rates: rates)
                     case .about: AboutSettings()
                     }
