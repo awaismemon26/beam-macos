@@ -45,6 +45,15 @@ final class FileSearcher {
         query.start()
     }
 
+    /// Lists each folder once in the background, so macOS asks for any folder access it needs (one prompt per
+    /// protected folder, one after another) now rather than during a search. Folders added with the open panel
+    /// are already granted.
+    nonisolated static func touchScopes(_ scopes: [String]) {
+        Task.detached(priority: .utility) {
+            for scope in scopes { _ = try? FileManager.default.contentsOfDirectory(atPath: scope) }
+        }
+    }
+
     /// Stops the running query and drops its observers; no further results are delivered.
     func cancel() {
         query?.stop()

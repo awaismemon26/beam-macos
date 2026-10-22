@@ -75,6 +75,9 @@ final class AppSettings {
         didSet {
             UserDefaults.standard.set(fileSearchEnabled, forKey: Self.fileSearchEnabledKey)
             if recordingAction == nil { onShortcutsChange?(activeShortcuts) }
+            // Ask for folder access now, while the user is looking at the switch, rather than on the first search
+            // (a prompt takes focus and would close the launcher mid-search).
+            if fileSearchEnabled && !oldValue { FileSearcher.touchScopes(fileScopes) }
         }
     }
 

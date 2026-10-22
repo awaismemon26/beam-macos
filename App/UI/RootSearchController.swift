@@ -304,7 +304,10 @@ final class RootSearchController {
         return browsing || recalled != nil
     }
 
+    /// Moves the selection, which ends history browsing. ↑/↓ reach this only when they didn't recall (never while
+    /// browsing), so the reset matters for Tab/⇧Tab: after a recall, a later ↑ moves the selection.
     private func move(_ delta: Int) {
+        navigator.reset()
         let count = model.items.count
         guard count > 0 else { return }
         withAnimation(Theme.spring) { model.selection = (model.selection + delta + count) % count }

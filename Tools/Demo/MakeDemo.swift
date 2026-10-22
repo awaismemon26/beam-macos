@@ -195,9 +195,9 @@ var frames: [Frame] = []
 func run() async {
     // Root search (Option+Space).
     let root = RootSearchModel()
-    for (name, path) in appPaths { if let image = icon(path) { root.icons[path] = image } }
-    let rootView = RootSearchView(model: root, onQueryChange: {}, onMove: { _ in }, onSubmit: {}, onCancel: {},
-                                  onActivate: { _ in }, onSettings: {})
+    for (_, path) in appPaths { if let image = icon(path) { root.icons[path] = image } }
+    let rootView = RootSearchView(model: root, onQueryChange: {}, onMove: { _ in }, onRecall: { _ in false }, onSubmit: {},
+                                  onCancel: {}, onActivate: { _ in }, onSettings: {}, onKey: { _ in false })
     let rootRenderer = PanelRenderer(PanelChrome { rootView }, size: Theme.rootSize)
     let rootCaption = ("⌥ Space", "Launch apps and calculate")
 
@@ -224,7 +224,7 @@ func run() async {
 
     // Window search (Option+Tab).
     let search = WindowSearchModel()
-    let searchView = WindowSearchView(model: search, onMove: { _ in }, onSubmit: {}, onCancel: {}, onActivate: { _ in })
+    let searchView = WindowSearchView(model: search, onMove: { _ in }, onRecall: { _ in false }, onSubmit: {}, onCancel: {}, onActivate: { _ in })
     let searchRenderer = PanelRenderer(PanelChrome { searchView }, size: Theme.rootSize)
     search.all = allWindows
     func searchFrame(_ query: String, _ seconds: Double) async {
