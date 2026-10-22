@@ -9,10 +9,12 @@ public enum TitleKey {
         guard let appBundleID else { return nil }
         let key: String
         if vsCode.contains(appBundleID) {
-            // "file — folder", "folder", "folder (Workspace)", with a "● " marker while a file has unsaved changes.
-            var last = part(title, last: true)
-            if last.hasSuffix(" (Workspace)") { last.removeLast(" (Workspace)".count) }
-            key = last
+            // "file — folder", "folder", "folder (Workspace)", "file — folder — Profile" (non-default profile),
+            // with a "● " marker while a file has unsaved changes. The folder is the second part when there is one.
+            let clean = title.hasPrefix("● ") ? String(title.dropFirst(2)) : title
+            var folder = part(clean, at: 1)
+            if folder.hasSuffix(" (Workspace)") { folder.removeLast(" (Workspace)".count) }
+            key = folder
         } else if office.contains(appBundleID) {
             key = withoutExtension(title)
         } else if appBundleID == "com.apple.Preview" {
@@ -37,18 +39,21 @@ public enum TitleKey {
         return trimmed.isEmpty ? nil : String(trimmed)
     }
 
-    /// The first (or last) part of a title split on an em dash (or `separator`). Scans UTF-8 bytes: this runs for
+    /// The part at `index` (0 = first; a too-large index gives the last part) of a title split on an em dash (or
+    /// `separator`). Scans UTF-8 bytes: this runs for
     /// every window on each panel open, and Character-by-Character splitting is several times slower.
-    private static func part(_ title: String, separator: String = " — ", last: Bool = false) -> String {
+    private static func part(_ title: String, separator: String = " — ", at index: Int = 0) -> String {
         var title = title, separator = separator
         return title.withUTF8 { bytes in
             separator.withUTF8 { sep in
-                var start = 0, end = bytes.count, i = 0
+                var start = 0, end = bytes.count, i = 0, current = 0
                 while i + sep.count <= bytes.count {
                     var j = 0
                     while j < sep.count, bytes[i + j] == sep[j] { j += 1 }
                     if j == sep.count {
-                        if last { start = i + sep.count } else { end = i; break }
+                        if current == index { end = i; break }
+                        current += 1
+                        start = i + sep.count
                         i += sep.count
                     } else {
                         i += 1
@@ -61,11 +66,14 @@ public enum TitleKey {
 
     private static func isSpace(_ byte: UInt8) -> Bool { byte == 0x20 || (0x09...0x0D).contains(byte) || byte >= 0x80 }
 
-    /// "Budget.xlsx" → "Budget". Only short alphanumeric extensions count ("v1.2 plan" keeps its dot).
+    /// "Budget.xlsx" → "Budget". Finder hides extensions by default, so a version dot must survive: an extension is
+    /// 1–5 ASCII alphanumerics with at least one letter, and not a version tag ("Plan 1.2", "report.v2" stay whole).
     private static func withoutExtension(_ name: String) -> String {
         guard let dot = name.lastIndex(of: "."), dot != name.startIndex else { return name }
         let ext = name[name.index(after: dot)...]
-        guard (1...5).contains(ext.count), ext.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else { return name }
+        guard (1...5).contains(ext.count), ext.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }),
+              ext.contains(where: \.isLetter) else { return name }
+        if ext.count > 1, ext.first?.isLetter == true, ext.dropFirst().allSatisfy(\.isNumber) { return name }
         return String(name[..<dot])
     }
 }

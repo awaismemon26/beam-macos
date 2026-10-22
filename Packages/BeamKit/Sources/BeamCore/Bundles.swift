@@ -110,3 +110,29 @@ public enum BundleMatcher {
         return BundleRule(appBundleID: window.bundleID, key: window.title, match: .exact, sessionWindowID: window.id)
     }
 }
+
+/// The `bundles.json` format: `{"version":1,"bundles":[…]}`.
+public struct BundleFile: Codable, Equatable, Sendable {
+    public static let currentVersion = 1
+
+    public var version = BundleFile.currentVersion
+    public var bundles: [BeamBundle]
+
+    public init(bundles: [BeamBundle]) {
+        self.bundles = bundles
+    }
+
+    /// `nil` when the data isn't a readable file of a version this build understands (corrupt, hand-broken,
+    /// or written by a newer Beam) — the caller must keep it rather than overwrite it.
+    public static func decode(_ data: Data) -> BundleFile? {
+        guard let file = try? JSONDecoder().decode(BundleFile.self, from: data), file.version <= currentVersion else { return nil }
+        return file
+    }
+
+    /// Window IDs don't outlive the session, so rules matching one window are never stored or loaded.
+    public func withoutSessionRules() -> BundleFile {
+        var copy = self
+        for index in copy.bundles.indices { copy.bundles[index].rules.removeAll { $0.sessionWindowID != nil } }
+        return copy
+    }
+}

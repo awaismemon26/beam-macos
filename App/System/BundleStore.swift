@@ -12,23 +12,28 @@ final class BundleStore {
     @ObservationIgnored private let url: URL
     @ObservationIgnored private var saveTask: Task<Void, Never>?
 
-    /// On disk: `{"version":1,"bundles":[…]}`.
-    private struct File: Codable {
-        var version = 1
-        var bundles: [BeamBundle]
-    }
-
     init() {
         let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Beam", isDirectory: true)
         url = directory.appendingPathComponent("bundles.json")
-        let saved = (try? Data(contentsOf: url)).flatMap { try? JSONDecoder().decode(File.self, from: $0) }
-        // Window IDs don't outlive the session, so rules matching one window are dropped on load.
-        bundles = (saved?.bundles ?? []).map { bundle in
-            var bundle = bundle
-            bundle.rules.removeAll { $0.sessionWindowID != nil }
-            return bundle
+        bundles = Self.load(from: url)
+    }
+
+    /// Reads the saved bundles. A file that exists but can't be used (corrupt, hand-broken, or written by a newer
+    /// Beam) is moved aside rather than left to be overwritten by the next save, so no bundles are lost.
+    private static func load(from url: URL) -> [BeamBundle] {
+        guard FileManager.default.fileExists(atPath: url.path) else { return [] }
+        if let data = try? Data(contentsOf: url), let file = BundleFile.decode(data) {
+            return file.withoutSessionRules().bundles
         }
+        let aside = url.appendingPathExtension("corrupt-\(Int(Date().timeIntervalSince1970))")
+        do {
+            try FileManager.default.moveItem(at: url, to: aside)
+            log.error("bundles.json couldn't be read; kept it as \(aside.lastPathComponent, privacy: .public)")
+        } catch {
+            log.error("bundles.json couldn't be read or moved aside: \(error.localizedDescription, privacy: .public)")
+        }
+        return []
     }
 
     func bundle(_ id: UUID) -> BeamBundle? {
@@ -92,11 +97,7 @@ final class BundleStore {
     private func scheduleSave() {
         saveTask?.cancel()
         // This-session rules stay in memory only.
-        let snapshot = File(bundles: bundles.map { bundle in
-            var bundle = bundle
-            bundle.rules.removeAll { $0.sessionWindowID != nil }
-            return bundle
-        })
+        let snapshot = BundleFile(bundles: bundles).withoutSessionRules()
         let url = url
         saveTask = Task {
             try? await Task.sleep(for: .seconds(1))
