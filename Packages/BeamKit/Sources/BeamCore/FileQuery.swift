@@ -32,6 +32,36 @@ public enum FileQuery {
         }
         return (format, arguments)
     }
+
+    /// The predicate's test, locally: every term appears in `name`, ignoring case and diacritics. Lets results
+    /// for a shorter query stay on screen, filtered, while Spotlight answers the longer one.
+    public static func nameMatches(_ name: String, terms: [String]) -> Bool {
+        terms.allSatisfy { name.range(of: $0, options: [.caseInsensitive, .diacriticInsensitive]) != nil }
+    }
+}
+
+/// Short, readable folder paths for file rows and the File Search settings.
+public enum FilePaths {
+    private static let iCloudDrive = "Library/Mobile Documents/com~apple~CloudDocs"
+
+    /// `~/Downloads` for a folder in the home folder, `iCloud Drive/…` inside iCloud Drive, else unchanged.
+    public static func display(_ folder: String, home: String) -> String {
+        if let rest = relative(folder, to: "\(home)/\(iCloudDrive)") { return "iCloud Drive" + rest }
+        if let rest = relative(folder, to: home) { return "~" + rest }
+        return folder
+    }
+
+    /// The folder that contains `path`.
+    public static func folder(of path: String) -> String {
+        (path as NSString).deletingLastPathComponent
+    }
+
+    /// `""` or `"/sub/path"` when `path` is `base` or inside it; nil otherwise (`/Users/xy` is not inside `/Users/x`).
+    private static func relative(_ path: String, to base: String) -> String? {
+        if path == base { return "" }
+        guard path.hasPrefix(base + "/") else { return nil }
+        return String(path.dropFirst(base.count))
+    }
 }
 
 /// One file found by Spotlight.

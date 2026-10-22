@@ -49,6 +49,29 @@ import Testing
         #expect(sorted == [usedNew, usedOld, modNew, modOld, nameA, nameB])
     }
 
+    @Test func nameMatchesEveryTermIgnoringCaseDiacriticsAndOrder() {
+        #expect(FileQuery.nameMatches("CV - Awais Memon - German.pdf", terms: ["awais", "cv"]))
+        #expect(FileQuery.nameMatches("Résumé.pdf", terms: ["resume"]))
+        #expect(!FileQuery.nameMatches("CV - Awais Memon - German.pdf", terms: ["awais", "french"]))
+        #expect(FileQuery.nameMatches("anything", terms: []))
+    }
+
+    @Test func displayAbbreviatesHomeAndNamesICloudDrive() {
+        let home = "/Users/x"
+        #expect(FilePaths.display("/Users/x/Downloads", home: home) == "~/Downloads")
+        #expect(FilePaths.display("/Users/x", home: home) == "~")
+        #expect(FilePaths.display("/Users/x/Library/Mobile Documents/com~apple~CloudDocs", home: home) == "iCloud Drive")
+        #expect(FilePaths.display("/Users/x/Library/Mobile Documents/com~apple~CloudDocs/Downloads", home: home)
+            == "iCloud Drive/Downloads")
+        #expect(FilePaths.display("/Users/xy/Downloads", home: home) == "/Users/xy/Downloads")
+        #expect(FilePaths.display("/Volumes/Disk/Work", home: home) == "/Volumes/Disk/Work")
+    }
+
+    @Test func folderIsTheParentForDisplay() {
+        #expect(FilePaths.folder(of: "/Users/x/Downloads/CV.pdf") == "/Users/x/Downloads")
+        #expect(FilePaths.folder(of: "/CV.pdf") == "/")
+    }
+
     @Test func defaultScopesAreTheFiveFolders() {
         #expect(FileScopes.defaults(home: "/Users/x") == [
             "/Users/x/Desktop",

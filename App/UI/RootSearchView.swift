@@ -10,12 +10,17 @@ struct RootSearchView: View {
     let onCancel: () -> Void
     let onActivate: (Int) -> Void
     let onSettings: () -> Void
+    let onKey: (PanelKey) -> Bool
+
+    private var isFileView: Bool { model.mode == .files }
 
     var body: some View {
         VStack(spacing: 0) {
             SearchField(
-                text: $model.query, placeholder: "Search apps or calculate…", focusTrigger: model.presentCount,
-                onMove: onMove, onRecall: onRecall, onSubmit: onSubmit, onCancel: onCancel, onCommandComma: onSettings
+                text: $model.query, placeholder: isFileView ? "Search files…" : "Search apps or calculate…",
+                focusTrigger: model.presentCount,
+                onMove: onMove, onRecall: onRecall, onSubmit: onSubmit, onCancel: onCancel, onCommandComma: onSettings,
+                chip: isFileView ? "Search Files" : nil, onKey: onKey
             )
             .onChange(of: model.query) { onQueryChange() }
             Divider().opacity(0.4)
@@ -30,7 +35,9 @@ struct RootSearchView: View {
         ScrollViewReader { proxy in
             ScrollView(.vertical) {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    if model.query.isEmpty && !model.items.isEmpty {
+                    if case .file = model.items.first {
+                        sectionHeader("Files")
+                    } else if model.query.isEmpty && !model.items.isEmpty {
                         sectionHeader("Suggestions")
                     }
                     ForEach(Array(model.items.enumerated()), id: \.element.id) { index, item in
@@ -59,6 +66,8 @@ struct RootSearchView: View {
         case let .command(command):
             ResultRow(icon: nil, systemImage: command.systemImage, title: command.rawValue, subtitle: nil,
                       accessory: "Command", isSelected: isSelected)
+        case let .file(file):
+            FileRow(file: file, icon: model.fileIcons.images[file.path], isSelected: isSelected)
         }
     }
 
@@ -89,6 +98,7 @@ struct RootSearchView: View {
         case .calculation: return "⏎ copy answer   esc close"
         case .app: return "⏎ open   esc close"
         case .command: return "⏎ run   esc close"
+        case .file: return "⏎ show in Finder   ⌘⏎ open   esc close"
         }
     }
 }

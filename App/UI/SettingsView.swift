@@ -2,7 +2,8 @@ import AppKit
 import SwiftUI
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case general = "General", shortcuts = "Shortcuts", launcher = "Launcher", calculator = "Calculator", about = "About"
+    case general = "General", shortcuts = "Shortcuts", launcher = "Launcher", calculator = "Calculator"
+    case fileSearch = "File Search", about = "About"
 
     var id: Self { self }
 
@@ -12,6 +13,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .shortcuts: "command"
         case .launcher: "magnifyingglass"
         case .calculator: "plus.forwardslash.minus"
+        case .fileSearch: "doc.text.magnifyingglass"
         case .about: "info.circle.fill"
         }
     }
@@ -22,6 +24,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .shortcuts: .orange
         case .launcher: .blue
         case .calculator: .green
+        case .fileSearch: .teal
         case .about: .indigo
         }
     }
@@ -60,6 +63,7 @@ struct SettingsView: View {
                     case .shortcuts: ShortcutsSettings(settings: settings)
                     case .launcher: LauncherSettings(settings: settings, history: history)
                     case .calculator: CalculatorSettings(settings: settings, rates: rates)
+                    case .fileSearch: FileSearchSettings(settings: settings)
                     case .about: AboutSettings()
                     }
                 }

@@ -64,7 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Task { _ = await enumerator.allWindows() } // warm the cache
 
         // Capture self directly: under @NSApplicationDelegateAdaptor, NSApp.delegate is SwiftUI's own object.
-        let tap = EventTap(bindings: settings.shortcuts) { [weak self] action in
+        let tap = EventTap(bindings: settings.activeShortcuts) { [weak self] action in
             MainActor.assumeIsolated {
                 self?.perform(action)
             }
@@ -91,7 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case .toggleRootSearch:
             rootSearch?.toggle()
         case .openSearchFiles:
-            rootSearch?.show() // until file search lands
+            rootSearch?.showFileSearch()
         case .openSettings:
             openSettings()
         case .pass, .swallow, .reenableTap:

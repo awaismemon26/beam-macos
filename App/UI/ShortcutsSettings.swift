@@ -15,14 +15,29 @@ struct ShortcutsSettings: View {
         ("⎋", "Close"),
     ]
 
+    /// The Search Files shortcut does nothing while File Search is off.
+    private func isUnavailable(_ action: ShortcutAction) -> Bool {
+        action == .searchFiles && !settings.fileSearchEnabled
+    }
+
+    private func footnote(for action: ShortcutAction) -> String? {
+        switch action {
+        case .switcher: "Hold the modifier, tap the key to move, release to switch."
+        case .searchFiles where !settings.fileSearchEnabled: "Turn on File Search to use this shortcut."
+        default: nil
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SettingsCard {
                 ForEach(Array(ShortcutAction.allCases.enumerated()), id: \.element) { index, action in
                     if index > 0 { SettingsDivider() }
-                    SettingsRow(action.title, footnote: action == .switcher ? "Hold the modifier, tap the key to move, release to switch." : nil) {
+                    SettingsRow(action.title, footnote: footnote(for: action)) {
                         HotkeyRecorder(action: action, settings: settings)
+                            .disabled(isUnavailable(action))
                     }
+                    .opacity(isUnavailable(action) ? 0.5 : 1)
                 }
             }
 
