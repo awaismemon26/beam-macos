@@ -117,10 +117,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item.button?.image = MenuBarIcon.image
         let menu = NSMenu()
 
-        let open = NSMenuItem(title: "Open Beam", action: #selector(openBeam), keyEquivalent: " ")
-        open.keyEquivalentModifierMask = [.option]
+        let open = NSMenuItem(title: "Open Beam", action: #selector(openBeam), keyEquivalent: "")
         open.target = self
+        Self.showShortcut(self.settings.shortcuts.launcher, on: open)
         menu.addItem(open)
+        self.settings.onShortcutsEdited = { [weak open] bindings in
+            if let open { Self.showShortcut(bindings.launcher, on: open) }
+        }
 
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
@@ -143,6 +146,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item.menu = menu
         item.isVisible = self.settings.showInMenuBar
         statusItem = item
+    }
+
+    /// The menu item shows the Launcher's shortcut; none (or a key without a menu equivalent) shows nothing.
+    private static func showShortcut(_ combo: KeyCombo?, on item: NSMenuItem) {
+        let equivalent = combo?.menuKeyEquivalent
+        item.keyEquivalent = equivalent?.key ?? ""
+        item.keyEquivalentModifierMask = equivalent?.mask ?? []
     }
 
     /// Opening Beam again (Spotlight, Finder, Dock) shows Settings — the way back when the menu-bar

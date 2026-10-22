@@ -29,6 +29,7 @@ final class AppSettings {
         didSet {
             Self.save(shortcuts)
             onShortcutsChange?(shortcuts)
+            onShortcutsEdited?(shortcuts)
         }
     }
 
@@ -48,6 +49,8 @@ final class AppSettings {
 
     /// Called with the bindings the event tap should use (`.disabled` while recording a new one).
     var onShortcutsChange: ((ShortcutBindings) -> Void)?
+    /// Called with the saved bindings after every edit (not while recording), for anything that displays them.
+    var onShortcutsEdited: ((ShortcutBindings) -> Void)?
     var onShowInMenuBarChange: ((Bool) -> Void)?
 
     init() {

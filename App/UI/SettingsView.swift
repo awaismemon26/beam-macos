@@ -2,13 +2,14 @@ import AppKit
 import SwiftUI
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case general = "General", about = "About"
+    case general = "General", shortcuts = "Shortcuts", about = "About"
 
     var id: Self { self }
 
     var systemImage: String {
         switch self {
         case .general: "gearshape.fill"
+        case .shortcuts: "command"
         case .about: "info.circle.fill"
         }
     }
@@ -16,6 +17,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var tint: Color {
         switch self {
         case .general: .gray
+        case .shortcuts: .orange
         case .about: .indigo
         }
     }
@@ -49,6 +51,7 @@ struct SettingsView: View {
                 Group {
                     switch pane {
                     case .general: GeneralSettings(settings: settings)
+                    case .shortcuts: ShortcutsSettings(settings: settings)
                     case .about: AboutSettings(settings: settings, rates: rates)
                     }
                 }
@@ -104,6 +107,12 @@ private struct GeneralSettings: View {
     @State private var openAtLogin = LoginItem.isEnabled
     @State private var loginError: String?
 
+    /// The icon stays while the Launcher has no shortcut: one way into Beam must remain.
+    private var menuBarFootnote: String? {
+        if !settings.showInMenuBar { return "Open Settings with ⌘, in Beam, or by opening Beam again." }
+        return settings.shortcuts.launcher == nil ? "Needed while the Launcher has no shortcut." : nil
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SettingsCard {
@@ -118,12 +127,10 @@ private struct GeneralSettings: View {
                         }
                 }
                 SettingsDivider()
-                SettingsRow("Show in Menu Bar",
-                            footnote: settings.showInMenuBar ? nil : "Open Settings with ⌘, in Beam, or by opening Beam again.") {
+                SettingsRow("Show in Menu Bar", footnote: menuBarFootnote) {
                     Toggle("", isOn: $settings.showInMenuBar).toggleStyle(.switch).labelsHidden()
+                        .disabled(settings.showInMenuBar && settings.shortcuts.launcher == nil)
                 }
-                SettingsDivider()
-                SettingsRow("Beam Hotkey") { HotkeyRecorder(settings: settings) }
             }
             if let loginError {
                 Text(loginError).font(.caption).foregroundStyle(.red).padding(.top, 6)
@@ -251,7 +258,7 @@ private struct AboutSettings: View {
 
 // MARK: - Building blocks
 
-private struct SettingsCard<Content: View>: View {
+struct SettingsCard<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
@@ -265,7 +272,7 @@ private struct SettingsCard<Content: View>: View {
     }
 }
 
-private struct SettingsRow<Control: View>: View {
+struct SettingsRow<Control: View>: View {
     let title: String
     let footnote: String?
     @ViewBuilder let control: Control
@@ -292,13 +299,13 @@ private struct SettingsRow<Control: View>: View {
     }
 }
 
-private struct SettingsDivider: View {
+struct SettingsDivider: View {
     var body: some View {
         Divider().padding(.leading, 14)
     }
 }
 
-private struct SettingsSectionHeader: View {
+struct SettingsSectionHeader: View {
     let title: String
     init(_ title: String) { self.title = title }
 
