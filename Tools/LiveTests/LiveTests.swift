@@ -5,14 +5,17 @@
 //
 // Requirements: Beam running with Accessibility access, the default hotkeys (⌥Space, ⌥Tab, ⌃Tab), and
 // Accessibility access for the terminal app running this script. Any keyboard layout works: text is sent as
-// characters, and only keys without a character (Tab, Space as a hotkey, Return, Esc, arrows, Delete, G for
-// ⌘G) use key codes. Text is typed only after Beam reports its own search field as focused, so keystrokes
-// never land in another app. Each test ends with Esc; nothing is switched or launched except Beam's own
-// Settings window, which is closed again.
+// characters, and only keys without a character (Tab, Space as a hotkey, Return, Esc, arrows, Delete) use key
+// codes; ⌘G is key code 5 together with the character "g". Text is typed only after Beam reports its own
+// search field as focused, so keystrokes never land in another app. Every ⏎ is preceded by a check of what it
+// will act on. Each test ends with Esc; nothing is switched or launched except Beam's own Settings window,
+// which is closed again.
 //
-// The history and bundles tests change Beam's history.json and bundles.json. The script backs both up when it
-// starts and, when it ends (also on Ctrl-C), quits Beam, puts them back and relaunches Beam. File search runs
-// only while File Search is on in Beam Settings.
+// The history and bundles tests change Beam's history.json and bundles.json. The script backs both up before
+// the first such test and, when it ends (also on Ctrl-C, SIGTERM and SIGHUP), quits Beam, puts them back and
+// relaunches Beam. If a run was killed hard enough to leave its backup behind, the next run refuses to start
+// until `swift Tools/LiveTests/LiveTests.swift --restore` has put the backup back. File search runs only
+// while File Search is on in Beam Settings.
 
 import AppKit
 import ApplicationServices
@@ -29,7 +32,11 @@ private enum Key {
     static let control: CGKeyCode = 59
 }
 
+/// Set when the script is being stopped by a signal: no more keys are sent while Beam is quit and restored.
+private var terminating = false
+
 private func post(_ code: CGKeyCode, down: Bool, flags: CGEventFlags = []) {
+    guard !terminating else { return }
     let event = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: down)!
     event.flags = flags
     event.post(tap: .cghidEventTap)
@@ -41,12 +48,25 @@ private func press(_ code: CGKeyCode, flags: CGEventFlags = []) {
     post(code, down: false, flags: flags)
 }
 
+/// A key that has a character (⌘G): key code and character together, so it works on any layout.
+private func press(_ code: CGKeyCode, character: String, flags: CGEventFlags) {
+    guard !terminating else { return }
+    let units = Array(character.utf16)
+    for down in [true, false] {
+        let event = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: down)!
+        event.keyboardSetUnicodeString(stringLength: units.count, unicodeString: units)
+        event.flags = flags
+        event.post(tap: .cghidEventTap)
+        usleep(12_000)
+    }
+}
+
 /// Types `text` as characters, whatever the keyboard layout. When Beam's search field is focused, each character
 /// is confirmed in the field before the next is sent: a busy Beam (the first calculation after a launch) otherwise
 /// drops keystrokes.
 private func type(_ text: String) {
     var expected = currentSearchFieldText()
-    for character in text {
+    for character in text where !terminating {
         let units = Array(String(character).utf16)
         for down in [true, false] {
             let event = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: down)!
@@ -59,6 +79,21 @@ private func type(_ text: String) {
             expected = before + String(character)
             let start = Date()
             while currentSearchFieldText() != expected, Date().timeIntervalSince(start) < 1 { usleep(5_000) }
+        }
+        usleep(15_000)
+    }
+}
+
+/// Types like a fast typist (~40 ms per character) without waiting for Beam, so a Beam that cannot keep up shows.
+private func typeUnconfirmed(_ text: String) {
+    for character in text where !terminating {
+        let units = Array(String(character).utf16)
+        for down in [true, false] {
+            let event = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: down)!
+            event.keyboardSetUnicodeString(stringLength: units.count, unicodeString: units)
+            event.flags = []
+            event.post(tap: .cghidEventTap)
+            usleep(12_000)
         }
         usleep(15_000)
     }
@@ -102,9 +137,148 @@ private func frontmostRegularApp() -> NSRunningApplication? {
     NSWorkspace.shared.runningApplications.filter { $0.activationPolicy == .regular }.first(where: isFrontmost)
 }
 
+// MARK: - The owner's data
+
+private let beamBundleID = "dev.beam.Beam"
+private let dataDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+    .appendingPathComponent("Beam", isDirectory: true)
+/// The files the history and bundles tests change.
+private let ownedFiles = ["history.json", "bundles.json"]
+/// Where the originals are kept while the tests run: each file, or `<name>.absent` when it did not exist, and
+/// `complete` once all of them are written. Never overwritten: a leftover one means a run was killed and the
+/// files may still be modified.
+private let backupDirectory = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("beam-livetests-backup", isDirectory: true)
+private var backupTaken = false
+private let restoreLock = NSLock()
+/// Beam's settings as found, compared again at the end.
+private let settingKeys = ["fileSearchEnabled", "showInMenuBar"]
+private let settingsAtStart = settingKeys.map { CFPreferencesCopyAppValue($0 as CFString, beamBundleID as CFString) as? NSNumber }
+
+private func runningBeams() -> [NSRunningApplication] {
+    NSRunningApplication.runningApplications(withBundleIdentifier: beamBundleID).filter { !$0.isTerminated }
+}
+
+private func pollUntil(_ timeout: TimeInterval, _ condition: () -> Bool) {
+    let start = Date()
+    while !condition(), Date().timeIntervalSince(start) < timeout { Thread.sleep(forTimeInterval: 0.1) }
+}
+
+private func hasCompleteBackup() -> Bool {
+    FileManager.default.fileExists(atPath: backupDirectory.appendingPathComponent("complete").path)
+}
+
+/// Beam keeps history and bundles in memory and rewrites the files, so a test that changes them must be undone
+/// by quitting Beam (which flushes), putting the saved files back, and starting Beam again.
+private func protectOwnerData() {
+    restoreLock.lock()
+    defer { restoreLock.unlock() }
+    guard !backupTaken else { return }
+    // Never overwrite a backup: startup refuses to run while one exists, so this is a safeguard only.
+    guard !FileManager.default.fileExists(atPath: backupDirectory.path) else {
+        print("A backup from an earlier run is in \(backupDirectory.path); run with --restore first.")
+        exit(2)
+    }
+    do {
+        try FileManager.default.createDirectory(at: backupDirectory, withIntermediateDirectories: true)
+        for name in ownedFiles {
+            let source = dataDirectory.appendingPathComponent(name)
+            if FileManager.default.fileExists(atPath: source.path) {
+                try Data(contentsOf: source).write(to: backupDirectory.appendingPathComponent(name))
+            } else {
+                try Data().write(to: backupDirectory.appendingPathComponent(name + ".absent"))
+            }
+        }
+        try Data().write(to: backupDirectory.appendingPathComponent("complete"))
+    } catch {
+        // Nothing has been changed yet, so a partial backup is simply dropped.
+        try? FileManager.default.removeItem(at: backupDirectory)
+        print("Could not back up history.json and bundles.json (\(error)); nothing was changed.")
+        exit(2)
+    }
+    backupTaken = true
+    print("(history.json and bundles.json are backed up in \(backupDirectory.path); restored when the tests end)")
+}
+
+/// Quits Beam (it flushes), puts the backed-up files back (removing the ones that did not exist), deletes the
+/// backup and starts Beam again from where it was running.
+private func restoreFromBackup() {
+    restoreLock.lock()
+    defer { restoreLock.unlock() }
+    guard hasCompleteBackup() else {
+        // An incomplete backup was never followed by a change, so it holds nothing worth keeping.
+        try? FileManager.default.removeItem(at: backupDirectory)
+        return
+    }
+    let launchURL = runningBeams().first?.bundleURL ?? URL(fileURLWithPath: "/Applications/Beam.app")
+    for app in runningBeams() { app.terminate() }
+    pollUntil(8) { runningBeams().isEmpty }
+    guard runningBeams().isEmpty else {
+        print("Beam did not quit; history.json and bundles.json were NOT restored (backup kept in \(backupDirectory.path); run with --restore)")
+        return
+    }
+    for name in ownedFiles {
+        let target = dataDirectory.appendingPathComponent(name)
+        let saved = backupDirectory.appendingPathComponent(name)
+        if FileManager.default.fileExists(atPath: saved.path), let data = try? Data(contentsOf: saved) {
+            try? data.write(to: target, options: .atomic)
+        } else if FileManager.default.fileExists(atPath: backupDirectory.appendingPathComponent(name + ".absent").path) {
+            try? FileManager.default.removeItem(at: target)
+        }
+    }
+    try? FileManager.default.removeItem(at: backupDirectory)
+    backupTaken = false
+    let open = Process()
+    open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+    open.arguments = [launchURL.path]
+    try? open.run()
+    open.waitUntilExit()
+    pollUntil(8) { runningBeams().count == 1 }
+    print("Beam restarted with the original history.json and bundles.json (pid \(runningBeams().first?.processIdentifier ?? 0))")
+}
+
+private func restoreOwnerData() {
+    guard backupTaken else { return }
+    restoreFromBackup()
+}
+
+atexit { restoreOwnerData() }
+// Ctrl-C, `kill`, a closed terminal or a timeout: stop sending keys, restore, leave. The handlers run on a global
+// queue because the main thread is usually inside a test.
+private var signalSources: [DispatchSourceSignal] = []
+for sig in [SIGINT, SIGTERM, SIGHUP] {
+    signal(sig, SIG_IGN)
+    let source = DispatchSource.makeSignalSource(signal: sig, queue: .global())
+    source.setEventHandler {
+        terminating = true
+        print("\nStopped by signal \(sig); restoring Beam's data…")
+        restoreOwnerData()
+        exit(128 + sig)
+    }
+    source.resume()
+    signalSources.append(source)
+}
+
+if CommandLine.arguments.contains("--restore") {
+    guard FileManager.default.fileExists(atPath: backupDirectory.path) else {
+        print("No leftover backup in \(backupDirectory.path); nothing to restore.")
+        exit(0)
+    }
+    restoreFromBackup()
+    exit(0)
+}
+if FileManager.default.fileExists(atPath: backupDirectory.path) {
+    print("""
+        A backup from an earlier run is still in \(backupDirectory.path).
+        That run was stopped before it could put Beam's history.json and bundles.json back, so they may still hold
+        its test data. Run `swift Tools/LiveTests/LiveTests.swift --restore` first (it restores them and removes
+        the backup), then run the tests again.
+        """)
+    exit(2)
+}
+
 // MARK: - Beam
 
-guard let beam = NSRunningApplication.runningApplications(withBundleIdentifier: "dev.beam.Beam").first else {
+guard let firstBeam = NSRunningApplication.runningApplications(withBundleIdentifier: "dev.beam.Beam").first else {
     print("Beam is not running. Install it with Tools/install.sh first.")
     exit(1)
 }
@@ -112,7 +286,10 @@ guard AXIsProcessTrusted() else {
     print("This terminal needs Accessibility access (System Settings ▸ Privacy & Security ▸ Accessibility).")
     exit(1)
 }
-private let beamApp = AXUIElementCreateApplication(beam.processIdentifier)
+/// The copy that is running (replaced when a test relaunches Beam) and where it was started from.
+private var beam = firstBeam
+private var beamApp = AXUIElementCreateApplication(firstBeam.processIdentifier)
+private let beamURL = firstBeam.bundleURL ?? URL(fileURLWithPath: "/Applications/Beam.app")
 
 /// Beam's focused text field, when one of its search panels has keyboard focus.
 private func beamSearchField() -> AXUIElement? {
@@ -148,81 +325,13 @@ private func closeBeamSettings() {
     usleep(300_000)
 }
 
-// MARK: - The owner's data
-
-private let beamBundleID = "dev.beam.Beam"
-private let dataDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-    .appendingPathComponent("Beam", isDirectory: true)
-/// The files the history and bundles tests change. `nil` = the file did not exist.
-private let ownedFiles = ["history.json", "bundles.json"]
-private var savedFiles: [String: Data?] = [:]
-private var needsRestore = false
-/// Beam's settings as found, compared again at the end.
-private let settingKeys = ["fileSearchEnabled", "showInMenuBar"]
-private let settingsAtStart = settingKeys.map { CFPreferencesCopyAppValue($0 as CFString, beamBundleID as CFString) as? NSNumber }
-
-private func runningBeams() -> [NSRunningApplication] {
-    NSRunningApplication.runningApplications(withBundleIdentifier: beamBundleID).filter { !$0.isTerminated }
-}
-
-/// Beam keeps history and bundles in memory and rewrites the files, so a test that changes them must be undone
-/// by quitting Beam (which flushes), putting the saved files back, and starting Beam again.
-private func protectOwnerData() {
-    guard !needsRestore else { return }
-    needsRestore = true
-    for name in ownedFiles { savedFiles[name] = try? Data(contentsOf: dataDirectory.appendingPathComponent(name)) }
-    // A copy outside this process, in case the script is killed before it can restore anything.
-    let backup = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("beam-livetests-backup", isDirectory: true)
-    try? FileManager.default.createDirectory(at: backup, withIntermediateDirectories: true)
-    for (name, data) in savedFiles {
-        if let data { try? data.write(to: backup.appendingPathComponent(name)) }
-        else { try? FileManager.default.removeItem(at: backup.appendingPathComponent(name)) }
-    }
-    print("(history.json and bundles.json are backed up in \(backup.path); restored when the tests end)")
-}
-
-private func pollUntil(_ timeout: TimeInterval, _ condition: () -> Bool) {
-    let start = Date()
-    while !condition(), Date().timeIntervalSince(start) < timeout { Thread.sleep(forTimeInterval: 0.1) }
-}
-
-private func restoreOwnerData() {
-    guard needsRestore else { return }
-    needsRestore = false
-    for app in runningBeams() { app.terminate() }
-    pollUntil(8) { runningBeams().isEmpty }
-    guard runningBeams().isEmpty else {
-        print("Beam did not quit; history.json and bundles.json were NOT restored (backup: \(NSTemporaryDirectory())beam-livetests-backup)")
-        return
-    }
-    for name in ownedFiles {
-        let url = dataDirectory.appendingPathComponent(name)
-        if let saved = savedFiles[name], let data = saved { try? data.write(to: url, options: .atomic) }
-        else { try? FileManager.default.removeItem(at: url) }
-    }
-    try? FileManager.default.removeItem(atPath: NSTemporaryDirectory() + "beam-livetests-backup")
-    let open = Process()
-    open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-    open.arguments = ["/Applications/Beam.app"]
-    try? open.run()
-    open.waitUntilExit()
-    pollUntil(8) { runningBeams().count == 1 }
-    print("Beam restarted with the original history.json and bundles.json (pid \(runningBeams().first?.processIdentifier ?? 0))")
-}
-
-atexit { restoreOwnerData() }
-signal(SIGINT) { _ in
-    restoreOwnerData()
-    exit(130)
-}
-
 // MARK: - Runner
 
 private var failures = 0
 private var results: [String] = []
 
 /// Optional filters: `swift Tools/LiveTests/LiveTests.swift settings switcher` runs only matching tests.
-private let filters = CommandLine.arguments.dropFirst().map { $0.lowercased() }
+private let filters = CommandLine.arguments.dropFirst().filter { !$0.hasPrefix("--") }.map { $0.lowercased() }
 
 private func test(_ name: String, _ body: () throws -> String) {
     guard filters.isEmpty || filters.contains(where: name.lowercased().contains) else { return }
@@ -277,6 +386,40 @@ test("Launcher opens with focus (⌥Space)") {
     }
     let ms = latencies.map { Int(($0 * 1000).rounded()) }
     return "hotkey → focused field: \(ms.map(String.init).joined(separator: ", ")) ms (incl. AX polling)"
+}
+
+test("Cold start: typing right after launch drops no keystrokes") {
+    // Quit Beam (it flushes), start it again and type into the launcher the moment it opens, at typing speed and
+    // without confirming characters: AppKit queues keys for a busy app, so none may be lost.
+    for app in runningBeams() { app.terminate() }
+    pollUntil(8) { runningBeams().isEmpty }
+    guard runningBeams().isEmpty else { throw Failure("Beam did not quit") }
+    let open = Process()
+    open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+    open.arguments = [beamURL.path]
+    try open.run()
+    open.waitUntilExit()
+    pollUntil(8) { runningBeams().count == 1 }
+    guard let fresh = runningBeams().first else { throw Failure("Beam did not start") }
+    beam = fresh
+    beamApp = AXUIElementCreateApplication(fresh.processIdentifier)
+    _ = beamWindowTexts() // the first AX request builds Beam's accessibility tree; keep it out of the typing
+    // The hotkey is registered a moment after launch; a press before that would reach the frontmost app, so wait,
+    // press once, and fail rather than press again.
+    Thread.sleep(forTimeInterval: 2)
+    press(Key.space, flags: .maskAlternate)
+    guard waitFor(timeout: 3, { beamSearchField() }) != nil else {
+        throw Failure("the launcher didn't open within 3 s of the hotkey, 2 s after launch")
+    }
+    let query = "5 % of 5000"
+    typeUnconfirmed(query)
+    Thread.sleep(forTimeInterval: 0.8)
+    let typed = currentSearchFieldText()
+    let rows = beamWindowTexts()
+    press(Key.escape)
+    guard typed == query else { throw Failure("typed \"\(query)\", the field has \(typed.map { "\"\($0)\"" } ?? "no text")") }
+    guard rows.contains("250") else { throw Failure("no 250 in \(rows)") }
+    return "\"\(query)\" arrived intact right after launch"
 }
 
 test("Calculator: 5 % of 5000 = 250") {
@@ -376,9 +519,10 @@ test("History: Esc doesn't record, ⏎ records, ↑ recalls") {
     guard afterEsc != "prefer" else { throw Failure("Esc recorded \"prefer\"") }
     // ⏎ on the Beam Settings command (an alias, so the query is unique) records the query.
     let rows = try searchAndRead(Key.space, flags: .maskAlternate, query: "preferences")
-    guard rows.contains("Beam Settings") else {
+    // ⏎ activates the first row: it must be the Beam Settings command, never an app.
+    guard rows.first == "Beam Settings" else {
         press(Key.escape)
-        throw Failure("\"preferences\" didn't list Beam Settings: \(rows)")
+        throw Failure("\"preferences\": the first row is \(rows.first.map { "\"\($0)\"" } ?? "missing"), not Beam Settings; ⏎ not pressed")
     }
     press(Key.returnKey)
     usleep(500_000)
@@ -402,7 +546,7 @@ test("Single instance: open -n hands over to the running Beam") {
     defer { closeBeamSettings() }
     let open = Process()
     open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-    open.arguments = ["-n", "/Applications/Beam.app"]
+    open.arguments = ["-n", beamURL.path]
     try open.run()
     open.waitUntilExit()
     // The running copy shows Settings when the second one hands over to it.
@@ -464,16 +608,23 @@ test("Bundles: ⌘G adds a window, ⌥Tab shows \"1 window\", ⌘⌫ removes it"
     // ⌘G on the first matching window, then name a new bundle and ⏎.
     var rows = try searchAndRead(Key.tab, flags: .maskAlternate, query: query)
     guard rows.contains(name) else { press(Key.escape); throw Failure("\"\(query)\" listed no \(name) window") }
-    press(Key.g, flags: .maskCommand)
+    press(Key.g, character: "g", flags: .maskCommand)
     guard waitFor(timeout: 1.5, poll: 0.02, { beamWindowTexts().contains { $0.hasPrefix("Add “") } ? true : nil }) != nil else {
         press(Key.escape)
         throw Failure("⌘G didn't open the bundle picker")
     }
     type(bundleName)
-    guard waitFor(timeout: 1.5, poll: 0.02, { beamWindowTexts().contains("New bundle “\(bundleName)”") ? true : nil }) != nil else {
+    // The new-bundle row is the selected one when no existing bundle matches the name, i.e. when it directly follows
+    // the picker's caption. Anything else (a bundle of the owner's) and ⏎ would add the window to the wrong bundle.
+    let newRow = "New bundle “\(bundleName)”"
+    guard waitFor(timeout: 1.5, poll: 0.02, { () -> Bool? in
+        let texts = beamWindowTexts()
+        guard let caption = texts.firstIndex(where: { $0.hasPrefix("Add “") }), texts.indices.contains(caption + 1) else { return nil }
+        return texts[caption + 1] == newRow ? true : nil
+    }) != nil else {
         press(Key.escape)
         press(Key.escape)
-        throw Failure("picker has no New bundle row for \"\(bundleName)\"")
+        throw Failure("the picker's first row isn't \"\(newRow)\"; ⏎ not pressed")
     }
     press(Key.returnKey)
     usleep(400_000)
@@ -487,7 +638,11 @@ test("Bundles: ⌘G adds a window, ⌥Tab shows \"1 window\", ⌘⌫ removes it"
         throw Failure("no \"\(bundleName)\" row with \"1 window\" in \(rows)")
     }
 
-    // ⏎ opens the bundle view (the bundle is the only match); ⌘⌫ drops the window's rule.
+    // ⏎ opens the bundle view. It is the selected row only when it is the one and only match (no Windows section).
+    guard rows.first == bundleName, !rows.contains("Windows") else {
+        press(Key.escape)
+        throw Failure("\"\(bundleName)\" isn't the only match (\(rows.count) texts, first \(rows.first.map { "\"\($0)\"" } ?? "missing")); ⏎ not pressed")
+    }
     press(Key.returnKey)
     guard waitFor(timeout: 1.5, poll: 0.02, { () -> Bool? in
         let texts = beamWindowTexts()
