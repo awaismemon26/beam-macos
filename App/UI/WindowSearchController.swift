@@ -43,6 +43,8 @@ final class WindowSearchModel {
     /// Every window, most recently used first.
     var all: [WindowInfo] = [] { didSet { recount(); rerank(keepSelection: true) } }
     var bundles: [BeamBundle] = [] { didSet { recount(); rerank(keepSelection: true) } }
+    /// Set while `reset(windows:bundles:)` assigns several properties, so the list is rebuilt once, not per property.
+    @ObservationIgnored private var isResetting = false
     /// The open bundle's files: its paths, then its saved searches' results.
     var bundleFiles: [BundleFileItem] = [] { didSet { rerank(keepSelection: true) } }
     private(set) var summaries: [BundleSummary] = []
@@ -108,11 +110,25 @@ final class WindowSearchModel {
         if let index = rowIDs.firstIndex(of: rowID) { selection = index }
     }
 
+    /// A fresh open: the main list with an empty field, the given windows and bundles, and the default selection.
+    func reset(windows: [WindowInfo], bundles: [BeamBundle]) {
+        isResetting = true
+        mode = .all
+        query = ""
+        all = windows
+        self.bundles = bundles
+        isResetting = false
+        recount()
+        rerank(keepSelection: false)
+    }
+
     private func recount() {
+        guard !isResetting else { return }
         summaries = bundles.map { BundleSummary($0, windows: all) }
     }
 
     private func rerank(keepSelection: Bool) {
+        guard !isResetting else { return }
         // A refresh keeps the highlighted window, and any row the user moved to. A default selection that isn't a
         // window (the bundle row before the windows load) moves to the new default: the first window.
         let isWindow = if case .window = selectedRow { true } else { false }
@@ -150,8 +166,6 @@ final class WindowSearchModel {
         query = text
         isRecalling = false
     }
-
-    func resetSelection() { selection = initialSelection }
 }
 
 /// Option+Tab: search every window by app name or title, and open bundles.
@@ -202,15 +216,11 @@ final class WindowSearchController {
         let signpost = Signpost.begin("windowSearch.open")
         model.navigator.reset()
         endBundleFiles()
-        model.mode = .all
-        model.query = ""
-        model.bundles = store.bundles
+        model.reset(windows: activity.mru.ordered(model.all), bundles: store.bundles)
         Task {
             let cached = await enumerator.cachedWindows()
             if model.all.isEmpty { model.all = activity.mru.ordered(cached) }
         }
-        model.all = activity.mru.ordered(model.all)
-        model.resetSelection()
         model.presentCount += 1
         panel.present(on: PanelScreens.screen(for: settings.panelScreen))
         Signpost.end("windowSearch.open", signpost)

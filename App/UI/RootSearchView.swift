@@ -115,12 +115,13 @@ struct RootSearchView: View {
 
     private var footerHint: String {
         if model.isPicker { return "⏎ add   esc back" }
-        guard model.items.indices.contains(model.selection) else { return "esc close" }
+        let esc = model.mode == .files ? "esc back" : "esc close" // Esc leaves the Search Files view
+        guard model.items.indices.contains(model.selection) else { return esc }
         switch model.items[model.selection] {
-        case .calculation: return "⏎ copy answer   esc close"
-        case .app: return "⏎ open   esc close"
-        case .command: return "⏎ run   esc close"
-        case .file: return "⏎ show in Finder   ⌘⏎ open   ⌘G add to bundle   ⇧⌘G save search   esc close"
+        case .calculation: return "⏎ copy answer   \(esc)"
+        case .app: return "⏎ open   \(esc)"
+        case .command: return "⏎ run   \(esc)"
+        case .file: return "⏎ show in Finder   ⌘⏎ open   ⌘G add to bundle   ⇧⌘G save search   \(esc)"
         }
     }
 }

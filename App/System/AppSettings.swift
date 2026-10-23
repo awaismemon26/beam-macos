@@ -32,7 +32,9 @@ final class AppSettings {
     var shortcuts: ShortcutBindings {
         didSet {
             Self.save(shortcuts)
-            onShortcutsChange?(activeShortcuts)
+            // While a recorder listens (a Reset or Clear on another row), the tap stays disabled; the real bindings
+            // return when recording ends.
+            onShortcutsChange?(recordingAction == nil ? activeShortcuts : .disabled)
             onShortcutsEdited?(shortcuts)
         }
     }

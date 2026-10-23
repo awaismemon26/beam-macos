@@ -146,12 +146,13 @@ struct WindowSearchView: View {
     }
 
     private var countText: String {
+        let windows = "\(model.windowCount) \(model.windowCount == 1 ? "window" : "windows")"
         switch model.mode {
         case .all:
-            return "\(model.windowCount) windows"
+            return windows
         case .bundle:
             let files = model.fileCount
-            return "\(model.windowCount) windows" + (files > 0 ? ", \(files) \(files == 1 ? "file" : "files")" : "")
+            return windows + (files > 0 ? ", \(files) \(files == 1 ? "file" : "files")" : "")
         case .picker:
             let bundles = model.pickerRows.count { if case .bundle = $0 { true } else { false } }
             return "\(bundles) \(bundles == 1 ? "bundle" : "bundles")"
@@ -164,6 +165,7 @@ struct WindowSearchView: View {
         case (.all, .bundle): "⏎ open   ⌘⏎ bring all forward   esc close"
         case (.all, _): "↑↓ select   ⏎ open   ⌘G add to bundle   esc close"
         case (_, .file): "⏎ show in Finder   ⌘⌫ remove   esc back"
+        case (.bundle, nil): "esc back" // nothing open or saved yet: no row for the other keys to act on
         default: "⏎ open   ⌘⏎ bring all forward   ⌘⌫ remove   esc back"
         }
     }
