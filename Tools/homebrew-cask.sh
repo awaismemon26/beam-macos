@@ -17,7 +17,7 @@ cask "beam" do
 
   url "https://github.com/awaismemon26/beam-macos/releases/download/v#{version}/Beam-#{version}.dmg"
   name "Beam"
-  desc "Window switcher and launcher"
+  desc "Native window switcher and launcher"
   homepage "https://github.com/awaismemon26/beam-macos"
 
   livecheck do

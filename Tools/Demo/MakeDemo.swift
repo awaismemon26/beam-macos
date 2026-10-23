@@ -43,7 +43,7 @@ func window(_ appName: String, _ title: String, minimized: Bool = false, desktop
 }
 
 let safariWindows = [
-    window("Safari", "Beam — a fast, native window switcher"),
+    window("Safari", "Beam — native macOS window switcher and launcher"),
     window("Safari", "Release notes – Beam 1.0.0"),
     window("Safari", "SwiftUI — Apple Developer Documentation", desktop: 2),
     window("Safari", "Weekend trip ideas", minimized: true),

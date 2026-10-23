@@ -6,7 +6,7 @@
 
 *Every window, one keystroke away.*
 
-**Window switcher + productivity tool for macOS.**<br>
+**Native macOS window switcher and launcher.**<br>
 Jump to any window, launch apps, find files and calculate — from the keyboard.
 
 [![Latest release](https://img.shields.io/github/v/release/awaismemon26/beam-macos?label=release&color=7b5cff)](https://github.com/awaismemon26/beam-macos/releases/latest)
