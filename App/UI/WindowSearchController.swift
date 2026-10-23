@@ -139,8 +139,9 @@ final class WindowSearchModel {
             initialSelection = 0
         case .picker:
             results = []
-            pickerRows = BundleSearch.pickerRows(bundles: summaries, query: query)
-            initialSelection = 0
+            let picker = BundleSearch.pickerRows(bundles: summaries, query: query)
+            pickerRows = picker.rows
+            initialSelection = picker.selection
         }
         selection = selectedID.flatMap { id in rowIDs.firstIndex(of: id) } ?? initialSelection
     }
@@ -373,14 +374,16 @@ final class WindowSearchController {
         model.select(rowID: WindowSearchRow.bundleRowID(id))
     }
 
-    /// ⌘⌫: drops the highlighted window's rules, or the highlighted file, from the bundle. A saved search's result
-    /// can't be removed on its own.
+    /// ⌘⌫: drops the highlighted window's own rules, or the highlighted file, from the bundle. A window that is in
+    /// only through broad rules, and a saved search's result, can't be removed here (Settings edits those).
     private func removeSelection(from id: UUID) {
         guard let row = model.selectedRow, let bundle = store.bundle(id) else { return }
         let index = model.selection
         switch row {
         case let .window(window):
-            for rule in bundle.rules where BundleMatcher.matches(rule, window) { store.remove(rule, from: id) }
+            let rules = BundleMatcher.removableRules(for: window, in: bundle)
+            guard !rules.isEmpty else { return shake() }
+            for rule in rules { store.remove(rule, from: id) }
         case let .file(item):
             guard bundle.files.contains(item.file.path) else { return shake() }
             store.removeFile(item.file.path, from: id)

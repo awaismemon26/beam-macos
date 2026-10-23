@@ -78,21 +78,21 @@ public enum BundleSearch {
 
     /// The ⌘ G picker: bundles whose names match `query` (best first, all of them for an empty query), then a
     /// "New bundle" row named by the trimmed query — left out when a bundle already has exactly that name.
-    public static func pickerRows(bundles: [BundleSummary], query: String) -> [BundlePickerRow] {
+    /// Typing a name + ⏎ should create that bundle, so the top bundle is selected only when it matches at least by
+    /// word prefix ("job" → "Job applications"); a looser match ("api") selects "New bundle". Empty query: row 0.
+    public static func pickerRows(bundles: [BundleSummary], query: String) -> (rows: [BundlePickerRow], selection: Int) {
         let name = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let q = FuzzyMatcher.normalize(query)
-        let matching: [BundleSummary]
-        if q.isEmpty {
-            matching = bundles
-        } else {
-            let prepared = PreparedQuery(q)
-            matching = bundles.enumerated()
-                .compactMap { offset, bundle in FuzzyMatcher.match(prepared, in: bundle.name).map { (offset, $0, bundle) } }
-                .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0 < $1.0 }
-                .map(\.2)
-        }
-        let rows = matching.map(BundlePickerRow.bundle)
-        let exists = !name.isEmpty && bundles.contains { $0.name.caseInsensitiveCompare(name) == .orderedSame }
-        return exists ? rows : rows + [.newBundle(name: name)]
+        guard !q.isEmpty else { return (bundles.map(BundlePickerRow.bundle) + [.newBundle(name: "")], 0) }
+
+        let prepared = PreparedQuery(q)
+        let hits = bundles.enumerated()
+            .compactMap { offset, bundle in FuzzyMatcher.match(prepared, in: bundle.name).map { (offset, $0, bundle) } }
+            .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0 < $1.0 }
+        let rows = hits.map { BundlePickerRow.bundle($0.2) }
+        let exists = bundles.contains { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+        guard !exists else { return (rows, 0) }
+        let topIsClose = hits.first.map { $0.1.tier >= .wordPrefix } ?? false
+        return (rows + [.newBundle(name: name)], topIsClose ? 0 : rows.count)
     }
 }

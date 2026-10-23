@@ -87,4 +87,21 @@ import Testing
         let found = BundleMatcher.windows(of: bundle, in: [chrome, flagsmithAPI, flagsmith, otherApp])
         #expect(found.map(\.id) == [5, 1])
     }
+
+    @Test func removableRulesAreOnlyTheWindowsOwn() {
+        let own = BundleMatcher.rule(for: flagsmith)
+        let session = rule(Self.code, "x", .exact, session: flagsmith.id)
+        let otherSession = rule(Self.code, "x", .exact, session: 99)
+        let contains = rule(Self.code, "flagsmith", .contains)
+        let anyApp = rule(nil, "flagsmith", .exact)
+        let otherKey = rule(Self.code, "flagsmith-api", .exact)
+        let otherAppRule = rule("com.apple.dt.Xcode", "flagsmith", .exact)
+        let bundle = BeamBundle(name: "b", rules: [own, session, otherSession, contains, anyApp, otherKey, otherAppRule])
+        #expect(BundleMatcher.removableRules(for: flagsmith, in: bundle) == [own, session])
+        // Only in the bundle through broad rules: nothing to remove.
+        #expect(BundleMatcher.removableRules(for: flagsmith, in: BeamBundle(name: "c", rules: [contains, anyApp])).isEmpty)
+        // Case-insensitive like matching.
+        let shouty = rule(Self.code, "FLAGSMITH", .exact)
+        #expect(BundleMatcher.removableRules(for: flagsmith, in: BeamBundle(name: "d", rules: [shouty])) == [shouty])
+    }
 }

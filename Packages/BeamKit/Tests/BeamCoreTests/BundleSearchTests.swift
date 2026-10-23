@@ -81,21 +81,40 @@ import Testing
     }
 
     @Test func pickerListsAllBundlesThenANewBundleRow() {
-        let rows = BundleSearch.pickerRows(bundles: [flagsmith, jobs], query: "")
-        #expect(rows == [.bundle(flagsmith), .bundle(jobs), .newBundle(name: "")])
+        let r = BundleSearch.pickerRows(bundles: [flagsmith, jobs], query: "")
+        #expect(r.rows == [.bundle(flagsmith), .bundle(jobs), .newBundle(name: "")])
+        #expect(r.selection == 0)
+        #expect(BundleSearch.pickerRows(bundles: [], query: "").selection == 0)
     }
 
     @Test func pickerFiltersByNameAndOffersTheTypedNameAsANewBundle() {
-        #expect(BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: "flag") == [.bundle(flagsmith), .newBundle(name: "flag")])
-        #expect(BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: " beam  ") == [.newBundle(name: "beam")])
+        #expect(BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: "flag").rows == [.bundle(flagsmith), .newBundle(name: "flag")])
+        let r = BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: " beam  ")
+        #expect(r.rows == [.newBundle(name: "beam")])
+        #expect(r.selection == 0)
+    }
+
+    @Test func pickerSelectsANewBundleUnlessABundleMatchesByPrefix() {
+        // "api" is only a substring of "Job applications": typing a name + ⏎ must create, not add to it.
+        let loose = BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: "api")
+        #expect(loose.rows == [.bundle(jobs), .newBundle(name: "api")])
+        #expect(loose.selection == 1)
+        // A subsequence match doesn't count either.
+        #expect(BundleSearch.pickerRows(bundles: [flagsmith], query: "fsm").selection == 1)
+        // Prefix, word-prefix and exact matches select the bundle.
+        #expect(BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: "job").selection == 0)
+        #expect(BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: "applic").selection == 0)
+        #expect(BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: "flag").selection == 0)
     }
 
     @Test func pickerOffersNoNewBundleWhenTheNameExists() {
-        #expect(BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: "FlagSmith") == [.bundle(flagsmith)])
+        let r = BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: "FlagSmith")
+        #expect(r.rows == [.bundle(flagsmith)])
+        #expect(r.selection == 0)
     }
 
     @Test func pickerRowIDsAreDistinct() {
-        let rows = BundleSearch.pickerRows(bundles: [flagsmith, jobs], query: "")
+        let rows = BundleSearch.pickerRows(bundles: [flagsmith, jobs], query: "").rows
         #expect(Set(rows.map(\.id)).count == rows.count)
     }
 }

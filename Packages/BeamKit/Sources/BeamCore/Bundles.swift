@@ -102,6 +102,18 @@ public enum BundleMatcher {
         windows.filter { window in bundle.rules.contains { matches($0, window) } }
     }
 
+    /// The rules ⌘ ⌫ removes for a window: those that name that window — its this-session rule, or an exact
+    /// title-key rule for its app and key. Broad rules ("title contains", any app) also cover other windows, so they
+    /// are left for the Settings rule editor; a window in the bundle only through them has nothing to remove.
+    public static func removableRules(for window: WindowInfo, in bundle: BeamBundle) -> [BundleRule] {
+        let key = TitleKey.extract(appBundleID: window.bundleID, title: window.title)
+        return bundle.rules.filter { rule in
+            if let sessionWindowID = rule.sessionWindowID { return sessionWindowID == window.id }
+            guard rule.match == .exact, let app = rule.appBundleID, app == window.bundleID, let key else { return false }
+            return equalsIgnoringCase(rule.key, key)
+        }
+    }
+
     /// The rule ⌘ G adds for a window: an exact title-key rule, or a this-session rule when there is no stable key.
     public static func rule(for window: WindowInfo) -> BundleRule {
         if let key = TitleKey.extract(appBundleID: window.bundleID, title: window.title) {
