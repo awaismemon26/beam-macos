@@ -85,6 +85,8 @@ final class RootSearchController {
     private let openSettings: () -> Void
     private let fileSearcher = FileSearcher()
     private var apps: [AppEntry] = []
+    /// App paths whose icons are being loaded, so a rebuild doesn't request them again.
+    private var loadingIcons: Set<String> = []
     /// The words being searched for in file names, while the query is a file search; nil otherwise.
     private var fileTerms: [String]?
     private var fileResults: [FileResult] = []
@@ -377,12 +379,22 @@ final class RootSearchController {
         model.fileIcons.load(items.compactMap { if case let .file(file) = $0 { file.path } else { nil } })
     }
 
+    /// Loads the icons the list is missing in one background task and publishes them with one model update. The first
+    /// open lists every app, and one task and one update per app meant hundreds of main-thread hops (each
+    /// invalidating the list) while the first keystrokes arrived; apps already being loaded are not requested again.
     private func loadIcons(for items: [RootItem]) {
-        for case let .app(app) in items where model.icons[app.id] == nil {
-            let path = app.id
-            Task.detached(priority: .userInitiated) {
-                let icon = NSWorkspace.shared.icon(forFile: path)
-                await MainActor.run { [weak self] in self?.model.icons[path] = icon }
+        var missing: [String] = []
+        for case let .app(app) in items where model.icons[app.id] == nil && loadingIcons.insert(app.id).inserted {
+            missing.append(app.id)
+        }
+        guard !missing.isEmpty else { return }
+        Task.detached(priority: .userInitiated) { [weak self, missing] in
+            var loaded: [String: NSImage] = [:]
+            for path in missing { loaded[path] = NSWorkspace.shared.icon(forFile: path) }
+            await MainActor.run { [weak self, loaded] in
+                guard let self else { return }
+                model.icons.merge(loaded) { _, new in new }
+                loadingIcons.subtract(missing)
             }
         }
     }
