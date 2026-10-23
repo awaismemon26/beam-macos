@@ -158,7 +158,7 @@ private struct BundleDetail: View {
                 }
                 if !searches.isEmpty { SettingsDivider() }
                 HStack(spacing: 10) {
-                    TextField("File name words, e.g. awais cv", text: $newSearch)
+                    TextField("File name words, e.g. invoice march", text: $newSearch)
                         .textFieldStyle(.roundedBorder)
                         .onSubmit(addSearch)
                     Button(action: addSearch) { Label("Add", systemImage: "plus") }

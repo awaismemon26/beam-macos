@@ -4,8 +4,8 @@ import Testing
 
 @Suite struct FileQueryTests {
     @Test func fPrefixYieldsTerms() {
-        #expect(FileQuery.prefixedTerms("f awais cv") == "awais cv")
-        #expect(FileQuery.prefixedTerms("f   cv ") == "cv")
+        #expect(FileQuery.prefixedTerms("f invoice march") == "invoice march")
+        #expect(FileQuery.prefixedTerms("f   march ") == "march")
     }
 
     @Test func bareFIsNotFileQuery() {
@@ -16,18 +16,18 @@ import Testing
     }
 
     @Test func onlyLowercaseFIsThePrefix() {
-        #expect(FileQuery.prefixedTerms("F cv") == nil)
+        #expect(FileQuery.prefixedTerms("F march") == nil)
     }
 
     @Test func termsSplitOnWhitespace() {
-        #expect(FileQuery.terms("  awais \t cv\n") == ["awais", "cv"])
+        #expect(FileQuery.terms("  invoice \t march\n") == ["invoice", "march"])
         #expect(FileQuery.terms("   ").isEmpty)
     }
 
     @Test func predicateHasOneClausePerTermCaseAndDiacriticInsensitive() {
-        let p = FileQuery.predicateFormat(terms: ["awais", "cv"])
+        let p = FileQuery.predicateFormat(terms: ["invoice", "march"])
         #expect(p.format.components(separatedBy: "kMDItemFSName LIKE[cd] %@").count == 3)
-        #expect(p.arguments == ["*awais*", "*cv*"])
+        #expect(p.arguments == ["*invoice*", "*march*"])
         #expect(p.format.contains("&&"))
     }
 
@@ -50,9 +50,9 @@ import Testing
     }
 
     @Test func nameMatchesEveryTermIgnoringCaseDiacriticsAndOrder() {
-        #expect(FileQuery.nameMatches("CV - Awais Memon - German.pdf", terms: ["awais", "cv"]))
+        #expect(FileQuery.nameMatches("Invoice March 2026.pdf", terms: ["march", "invoice"]))
         #expect(FileQuery.nameMatches("Résumé.pdf", terms: ["resume"]))
-        #expect(!FileQuery.nameMatches("CV - Awais Memon - German.pdf", terms: ["awais", "french"]))
+        #expect(!FileQuery.nameMatches("Invoice March 2026.pdf", terms: ["invoice", "april"]))
         #expect(FileQuery.nameMatches("anything", terms: []))
     }
 
@@ -68,8 +68,8 @@ import Testing
     }
 
     @Test func folderIsTheParentForDisplay() {
-        #expect(FilePaths.folder(of: "/Users/x/Downloads/CV.pdf") == "/Users/x/Downloads")
-        #expect(FilePaths.folder(of: "/CV.pdf") == "/")
+        #expect(FilePaths.folder(of: "/Users/x/Downloads/Invoice.pdf") == "/Users/x/Downloads")
+        #expect(FilePaths.folder(of: "/Invoice.pdf") == "/")
     }
 
     @Test func defaultScopesAreTheFiveFolders() {

@@ -4,8 +4,8 @@ import Testing
 @Suite struct TitleKeyTests {
     @Test(arguments: ["com.microsoft.VSCode", "com.microsoft.VSCodeInsiders"])
     func vsCodeUsesTheFolderPart(bundleID: String) {
-        #expect(TitleKey.extract(appBundleID: bundleID, title: "azure-pipelines.yml — flagsmith") == "flagsmith")
-        #expect(TitleKey.extract(appBundleID: bundleID, title: "flagsmith") == "flagsmith")
+        #expect(TitleKey.extract(appBundleID: bundleID, title: "azure-pipelines.yml — acme-api") == "acme-api")
+        #expect(TitleKey.extract(appBundleID: bundleID, title: "acme-api") == "acme-api")
         #expect(TitleKey.extract(appBundleID: bundleID, title: "aie (Workspace)") == "aie")
         #expect(TitleKey.extract(appBundleID: bundleID, title: "● main.swift — beam") == "beam")
     }

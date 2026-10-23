@@ -43,7 +43,7 @@ struct WindowSearchView: View {
         }
     }
 
-    /// `‹ flagsmith`: the bundle's name, and the way back to the main list.
+    /// `‹ acme-api`: the bundle's name, and the way back to the main list.
     private func bundleHeader(_ bundle: BeamBundle) -> some View {
         HStack(spacing: 6) {
             Image(systemName: "chevron.left")

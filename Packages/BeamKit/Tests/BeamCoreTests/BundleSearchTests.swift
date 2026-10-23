@@ -3,21 +3,21 @@ import Testing
 @testable import BeamCore
 
 @Suite struct BundleSearchTests {
-    let flagsmith = BundleSummary(id: UUID(), name: "flagsmith", openWindows: 2, files: 0)
+    let acme = BundleSummary(id: UUID(), name: "acme-api", openWindows: 2, files: 0)
     let jobs = BundleSummary(id: UUID(), name: "Job applications", openWindows: 0, files: 3)
-    let azure = WindowInfo.fixture(id: 1, appName: "Code", title: "azure-pipelines.yml — flagsmith")
+    let azure = WindowInfo.fixture(id: 1, appName: "Code", title: "azure-pipelines.yml — acme-api")
     let gmail = WindowInfo.fixture(id: 2, appName: "Google Chrome", title: "Inbox (12) - Gmail")
     let notes = WindowInfo.fixture(id: 3, appName: "Notes", title: "Shopping")
 
     @Test func emptyQueryListsBundlesThenWindowsAndSelectsTheFirstWindow() {
-        let r = BundleSearch.rank(windows: [gmail, notes], bundles: [flagsmith, jobs], query: "")
-        #expect(r.items == [.bundle(flagsmith), .bundle(jobs), .window(gmail), .window(notes)])
+        let r = BundleSearch.rank(windows: [gmail, notes], bundles: [acme, jobs], query: "")
+        #expect(r.items == [.bundle(acme), .bundle(jobs), .window(gmail), .window(notes)])
         #expect(r.selection == 2)
     }
 
     @Test func emptyQueryWithNoWindowsSelectsZero() {
-        let r = BundleSearch.rank(windows: [], bundles: [flagsmith, jobs], query: "  ")
-        #expect(r.items == [.bundle(flagsmith), .bundle(jobs)])
+        let r = BundleSearch.rank(windows: [], bundles: [acme, jobs], query: "  ")
+        #expect(r.items == [.bundle(acme), .bundle(jobs)])
         #expect(r.selection == 0)
     }
 
@@ -30,22 +30,22 @@ import Testing
     }
 
     @Test func aBundleThatMatchesBetterThanAnyWindowIsSelected() {
-        // "flagsmith" is an exact bundle name but only a substring of the window title.
-        let r = BundleSearch.rank(windows: [azure, gmail], bundles: [flagsmith, jobs], query: "flagsmith")
-        #expect(r.items == [.bundle(flagsmith), .window(azure)])
+        // "acme-api" is an exact bundle name but only a substring of the window title.
+        let r = BundleSearch.rank(windows: [azure, gmail], bundles: [acme, jobs], query: "acme-api")
+        #expect(r.items == [.bundle(acme), .window(azure)])
         #expect(r.selection == 0)
     }
 
     @Test func aWindowThatMatchesAsWellOrBetterIsSelected() {
         // "azure-pipe" matches only the window title; the bundle doesn't match at all.
-        let r = BundleSearch.rank(windows: [gmail, azure], bundles: [flagsmith, jobs], query: "azure-pipe")
+        let r = BundleSearch.rank(windows: [gmail, azure], bundles: [acme, jobs], query: "azure-pipe")
         #expect(r.items == [.window(azure)])
         #expect(r.selection == 0)
 
         // Equal tier (both prefix matches): the window wins the selection, bundles stay above.
-        let tie = WindowInfo.fixture(id: 4, appName: "Flag Tool", title: "x")
-        let r2 = BundleSearch.rank(windows: [tie], bundles: [flagsmith], query: "flag")
-        #expect(r2.items == [.bundle(flagsmith), .window(tie)])
+        let tie = WindowInfo.fixture(id: 4, appName: "Acme Tool", title: "x")
+        let r2 = BundleSearch.rank(windows: [tie], bundles: [acme], query: "acme")
+        #expect(r2.items == [.bundle(acme), .window(tie)])
         #expect(r2.selection == 1)
     }
 
@@ -57,14 +57,14 @@ import Testing
     }
 
     @Test func bundlesAreRankedByMatchQuality() {
-        let loose = BundleSummary(id: UUID(), name: "The big flagsmith plan", openWindows: 0, files: 0)
-        let r = BundleSearch.rank(windows: [], bundles: [loose, flagsmith], query: "flagsmith")
-        #expect(r.items == [.bundle(flagsmith), .bundle(loose)])
+        let loose = BundleSummary(id: UUID(), name: "The big acme-api plan", openWindows: 0, files: 0)
+        let r = BundleSearch.rank(windows: [], bundles: [loose, acme], query: "acme-api")
+        #expect(r.items == [.bundle(acme), .bundle(loose)])
         #expect(r.selection == 0)
     }
 
     @Test func nothingMatchingSelectsZero() {
-        let r = BundleSearch.rank(windows: [gmail], bundles: [flagsmith], query: "zzzz")
+        let r = BundleSearch.rank(windows: [gmail], bundles: [acme], query: "zzzz")
         #expect(r.items.isEmpty)
         #expect(r.selection == 0)
     }
@@ -81,40 +81,40 @@ import Testing
     }
 
     @Test func pickerListsAllBundlesThenANewBundleRow() {
-        let r = BundleSearch.pickerRows(bundles: [flagsmith, jobs], query: "")
-        #expect(r.rows == [.bundle(flagsmith), .bundle(jobs), .newBundle(name: "")])
+        let r = BundleSearch.pickerRows(bundles: [acme, jobs], query: "")
+        #expect(r.rows == [.bundle(acme), .bundle(jobs), .newBundle(name: "")])
         #expect(r.selection == 0)
         #expect(BundleSearch.pickerRows(bundles: [], query: "").selection == 0)
     }
 
     @Test func pickerFiltersByNameAndOffersTheTypedNameAsANewBundle() {
-        #expect(BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: "flag").rows == [.bundle(flagsmith), .newBundle(name: "flag")])
-        let r = BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: " beam  ")
+        #expect(BundleSearch.pickerRows(bundles: [jobs, acme], query: "acme").rows == [.bundle(acme), .newBundle(name: "acme")])
+        let r = BundleSearch.pickerRows(bundles: [jobs, acme], query: " beam  ")
         #expect(r.rows == [.newBundle(name: "beam")])
         #expect(r.selection == 0)
     }
 
     @Test func pickerSelectsANewBundleUnlessABundleMatchesByPrefix() {
-        // "api" is only a substring of "Job applications": typing a name + ⏎ must create, not add to it.
-        let loose = BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: "api")
-        #expect(loose.rows == [.bundle(jobs), .newBundle(name: "api")])
+        // "plic" is only a substring of "Job applications": typing a name + ⏎ must create, not add to it.
+        let loose = BundleSearch.pickerRows(bundles: [jobs, acme], query: "plic")
+        #expect(loose.rows == [.bundle(jobs), .newBundle(name: "plic")])
         #expect(loose.selection == 1)
         // A subsequence match doesn't count either.
-        #expect(BundleSearch.pickerRows(bundles: [flagsmith], query: "fsm").selection == 1)
+        #expect(BundleSearch.pickerRows(bundles: [acme], query: "cep").selection == 1)
         // Prefix, word-prefix and exact matches select the bundle.
-        #expect(BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: "job").selection == 0)
-        #expect(BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: "applic").selection == 0)
-        #expect(BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: "flag").selection == 0)
+        #expect(BundleSearch.pickerRows(bundles: [jobs, acme], query: "job").selection == 0)
+        #expect(BundleSearch.pickerRows(bundles: [jobs, acme], query: "applic").selection == 0)
+        #expect(BundleSearch.pickerRows(bundles: [jobs, acme], query: "acme").selection == 0)
     }
 
     @Test func pickerOffersNoNewBundleWhenTheNameExists() {
-        let r = BundleSearch.pickerRows(bundles: [jobs, flagsmith], query: "FlagSmith")
-        #expect(r.rows == [.bundle(flagsmith)])
+        let r = BundleSearch.pickerRows(bundles: [jobs, acme], query: "Acme-API")
+        #expect(r.rows == [.bundle(acme)])
         #expect(r.selection == 0)
     }
 
     @Test func pickerRowIDsAreDistinct() {
-        let rows = BundleSearch.pickerRows(bundles: [flagsmith, jobs], query: "").rows
+        let rows = BundleSearch.pickerRows(bundles: [acme, jobs], query: "").rows
         #expect(Set(rows.map(\.id)).count == rows.count)
     }
 }

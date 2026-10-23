@@ -33,13 +33,13 @@ Jump to any window, launch apps, find files and calculate — instantly, from th
   move, release to jump. Works across Desktops and brings back minimized windows. Esc cancels.
 - **⌥ Tab — search every window.** Type an app name (`chrome`, `vscode`, `teams`) or part of a window title
   (`jira`, `invoice`) and press Enter to go straight to that window — on any Desktop, even if minimized.
-- **Bundles — one per project.** Group the windows and files of a project or task (“flagsmith”: three VS Code
+- **Bundles — one per project.** Group the windows and files of a project or task (“acme-api”: three VS Code
   windows, an Excel sheet, a PDF). Bundles are listed first in ⌥ Tab with a grey “4 windows”; ⌘ Enter brings all
   of a bundle's windows forward at once, across apps. Highlight a window and press ⌘ G to add it; it rejoins
   after a restart by itself. Edit them in Settings ▸ Bundles.
 - **⌥ Space — launcher.** Fuzzy app search that learns what you open most, plus Beam's own commands
   (“settings”, “switch windows”, “search files”).
-- **File search.** Type `f awais cv` in the launcher, or run **Search Files**, to find files by name in the
+- **File search.** Type `f invoice march` in the launcher, or run **Search Files**, to find files by name in the
   folders you choose (Desktop, Documents, Downloads, Pictures, iCloud Drive by default). Enter reveals the file
   in Finder, ⌘ Enter opens it. Off until you turn it on in Settings ▸ File Search.
 - **Search history.** Press ↑ in an empty launcher or window-search field to bring back what you searched

@@ -3,11 +3,11 @@ import Testing
 @testable import BeamCore
 
 @Suite struct BundleFileTests {
-    let rule = BundleRule(appBundleID: "com.microsoft.VSCode", key: "flagsmith", match: .exact)
+    let rule = BundleRule(appBundleID: "com.microsoft.VSCode", key: "acme-api", match: .exact)
     let session = BundleRule(appBundleID: "com.google.Chrome", key: "Docs", match: .exact, sessionWindowID: 7)
 
     @Test func roundTripsWithVersionOne() throws {
-        let bundle = BeamBundle(name: "flagsmith", rules: [rule], files: ["/tmp/a.txt"], savedSearches: ["awais cv"])
+        let bundle = BeamBundle(name: "acme-api", rules: [rule], files: ["/tmp/a.txt"], savedSearches: ["invoice march"])
         let data = try JSONEncoder().encode(BundleFile(bundles: [bundle]))
         let json = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         #expect(json["version"] as? Int == 1)
