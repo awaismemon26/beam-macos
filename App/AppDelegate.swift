@@ -11,8 +11,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     let settings = AppSettings()
     let calculator = CalculatorService()
-    private let history = HistoryStore()
-    private let bundles = BundleStore()
+    /// Created only once this copy is the one that keeps running (`SingleInstance.resolve()`): loading reads, and
+    /// for an unreadable bundles.json moves aside, files a newer or still-running copy owns.
+    private var history: HistoryStore!
+    private var bundles: BundleStore!
     private var settingsWindow: NSWindow?
     private var settingsCloseToken: NSObjectProtocol?
 
@@ -31,6 +33,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             NSApp.terminate(nil)
             return
         }
+        history = HistoryStore()
+        bundles = BundleStore()
         settings.applyAppearance()
         installStatusItem()
         settings.onShowInMenuBarChange = { [weak self] visible in self?.statusItem?.isVisible = visible }
@@ -57,8 +61,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     /// Debounced saves still waiting are written before Beam exits.
     func applicationWillTerminate(_ notification: Notification) {
-        bundles.flush()
-        history.flush()
+        bundles?.flush() // nil when this copy handed over before loading anything
+        history?.flush()
         rootSearch?.flush()
     }
 
@@ -181,6 +185,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc func openSettings() {
+        guard let history, let bundles else { return } // not set up yet (or handing over)
         if settingsWindow == nil {
             let window = NSWindow(
                 contentRect: NSRect(origin: .zero, size: SettingsView.size),
