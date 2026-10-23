@@ -3,7 +3,7 @@ import Foundation
 import SoulverCore
 
 /// Natural-language calculator backed by SoulverCore (the engine Raycast ships).
-/// Personal use only under SoulverCore's licence terms.
+/// Used with Soulver's permission; the README credits it ("Calculator powered by SoulverCore").
 public actor CalculatorService {
     private let calculator: Calculator
     private let rateProvider: ECBCurrencyRateProvider?

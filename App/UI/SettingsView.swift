@@ -2,13 +2,19 @@ import AppKit
 import SwiftUI
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case general = "General", about = "About"
+    case general = "General", shortcuts = "Shortcuts", launcher = "Launcher", calculator = "Calculator"
+    case fileSearch = "File Search", bundles = "Bundles", about = "About"
 
     var id: Self { self }
 
     var systemImage: String {
         switch self {
         case .general: "gearshape.fill"
+        case .shortcuts: "command"
+        case .launcher: "magnifyingglass"
+        case .calculator: "plus.forwardslash.minus"
+        case .fileSearch: "doc.text.magnifyingglass"
+        case .bundles: "square.stack.3d.up.fill"
         case .about: "info.circle.fill"
         }
     }
@@ -16,12 +22,17 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var tint: Color {
         switch self {
         case .general: .gray
+        case .shortcuts: .orange
+        case .launcher: .blue
+        case .calculator: .green
+        case .fileSearch: .teal
+        case .bundles: .pink
         case .about: .indigo
         }
     }
 }
 
-/// Currency-rate status shown in About; closures keep the view independent of the calculator engine.
+/// Currency-rate status shown in Calculator; closures keep the view independent of the calculator engine.
 struct RatesStatus {
     let lastUpdate: () async -> Date?
     let refresh: () async -> Void
@@ -30,11 +41,15 @@ struct RatesStatus {
 /// Raycast-style settings: a sidebar of panes, each a column of grouped cards.
 struct SettingsView: View {
     @Bindable var settings: AppSettings
+    let history: HistoryStore
+    let bundles: BundleStore
     let rates: RatesStatus
     @State private var pane: SettingsPane
 
-    init(settings: AppSettings, rates: RatesStatus, initialPane: SettingsPane = .general) {
+    init(settings: AppSettings, history: HistoryStore, bundles: BundleStore, rates: RatesStatus, initialPane: SettingsPane = .general) {
         self.settings = settings
+        self.history = history
+        self.bundles = bundles
         self.rates = rates
         _pane = State(initialValue: initialPane)
     }
@@ -49,7 +64,12 @@ struct SettingsView: View {
                 Group {
                     switch pane {
                     case .general: GeneralSettings(settings: settings)
-                    case .about: AboutSettings(settings: settings, rates: rates)
+                    case .shortcuts: ShortcutsSettings(settings: settings)
+                    case .launcher: LauncherSettings(settings: settings, history: history)
+                    case .calculator: CalculatorSettings(settings: settings, rates: rates)
+                    case .fileSearch: FileSearchSettings(settings: settings)
+                    case .bundles: BundlesSettings(store: bundles, settings: settings)
+                    case .about: AboutSettings()
                     }
                 }
                 .padding(.horizontal, 24)
@@ -104,6 +124,12 @@ private struct GeneralSettings: View {
     @State private var openAtLogin = LoginItem.isEnabled
     @State private var loginError: String?
 
+    /// The icon stays while the Launcher has no shortcut: one way into Beam must remain.
+    private var menuBarFootnote: String? {
+        if !settings.showInMenuBar { return "Open Settings with ⌘, in Beam, or by opening Beam again." }
+        return settings.shortcuts.launcher == nil ? "Needed while the Launcher has no shortcut." : nil
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SettingsCard {
@@ -118,12 +144,10 @@ private struct GeneralSettings: View {
                         }
                 }
                 SettingsDivider()
-                SettingsRow("Show in Menu Bar",
-                            footnote: settings.showInMenuBar ? nil : "Open Settings with ⌘, in Beam, or by opening Beam again.") {
+                SettingsRow("Show in Menu Bar", footnote: menuBarFootnote) {
                     Toggle("", isOn: $settings.showInMenuBar).toggleStyle(.switch).labelsHidden()
+                        .disabled(settings.showInMenuBar && settings.shortcuts.launcher == nil)
                 }
-                SettingsDivider()
-                SettingsRow("Beam Hotkey") { HotkeyRecorder(settings: settings) }
             }
             if let loginError {
                 Text(loginError).font(.caption).foregroundStyle(.red).padding(.top, 6)
@@ -173,14 +197,10 @@ private struct GeneralSettings: View {
 // MARK: - About
 
 private struct AboutSettings: View {
-    @Bindable var settings: AppSettings
-    let rates: RatesStatus
     @State private var isTrusted = Permissions.isTrusted
-    @State private var ratesUpdated: Date?
-    @State private var refreshing = false
 
     private static let repositoryURL = URL(string: "https://github.com/awaismemon26/beam-macos")!
-    private static let soulverURL = URL(string: "https://soulver.app/core")!
+    private static let issuesURL = URL(string: "https://github.com/awaismemon26/beam-macos/issues/new/choose")!
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -191,7 +211,7 @@ private struct AboutSettings: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Beam").font(.system(size: 22, weight: .semibold))
                     Text("Version \(Self.version)").foregroundStyle(.secondary)
-                    Text("Switch windows, launch apps and calculate, instantly.")
+                    Text("Every window, one keystroke away.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -206,34 +226,16 @@ private struct AboutSettings: View {
                         Button("Open System Settings") { Permissions.openAccessibilitySettings() }
                     }
                 }
-                SettingsDivider()
-                SettingsRow("Currency Rates") {
-                    HStack(spacing: 10) {
-                        Text(ratesUpdated.map { "Updated \($0.formatted(.relative(presentation: .named)))" }
-                             ?? "Built-in rates")
-                            .foregroundStyle(.secondary)
-                        Button(refreshing ? "Refreshing…" : "Refresh") {
-                            refreshing = true
-                            Task {
-                                await rates.refresh()
-                                ratesUpdated = await rates.lastUpdate()
-                                refreshing = false
-                            }
-                        }
-                        .disabled(refreshing)
-                    }
-                }
             }
 
             SettingsSectionHeader("Links")
             SettingsCard {
                 SettingsRow("Source Code") { Link("GitHub", destination: Self.repositoryURL) }
                 SettingsDivider()
-                SettingsRow("Calculator Engine") { Link("SoulverCore", destination: Self.soulverURL) }
+                SettingsRow("Feedback") { Link("Report an issue", destination: Self.issuesURL) }
             }
         }
         .task {
-            ratesUpdated = await rates.lastUpdate()
             while !Task.isCancelled {
                 isTrusted = Permissions.isTrusted
                 try? await Task.sleep(for: .seconds(3))
@@ -251,7 +253,7 @@ private struct AboutSettings: View {
 
 // MARK: - Building blocks
 
-private struct SettingsCard<Content: View>: View {
+struct SettingsCard<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
@@ -265,7 +267,7 @@ private struct SettingsCard<Content: View>: View {
     }
 }
 
-private struct SettingsRow<Control: View>: View {
+struct SettingsRow<Control: View>: View {
     let title: String
     let footnote: String?
     @ViewBuilder let control: Control
@@ -292,13 +294,13 @@ private struct SettingsRow<Control: View>: View {
     }
 }
 
-private struct SettingsDivider: View {
+struct SettingsDivider: View {
     var body: some View {
         Divider().padding(.leading, 14)
     }
 }
 
-private struct SettingsSectionHeader: View {
+struct SettingsSectionHeader: View {
     let title: String
     init(_ title: String) { self.title = title }
 

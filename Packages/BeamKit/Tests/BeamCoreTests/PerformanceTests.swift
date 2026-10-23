@@ -62,6 +62,40 @@ import Testing
         #expect(worst < Self.frameBudget)
     }
 
+    /// 30 bundles × 5 rules (exact, contains, any-app, session) over 300 windows.
+    @Test func bundleRankingFitsAFrame() {
+        let vsCode = "com.microsoft.VSCode"
+        let windows = (0..<300).map { i in
+            WindowInfo.fixture(
+                id: UInt32(i + 1), appName: Self.words[i % Self.words.count],
+                bundleID: i % 3 == 0 ? vsCode : "dev.test.\(i % 40)",
+                title: "Document \(i) — project\(i % 30) / \(Self.words[(i * 5) % Self.words.count]) notes and more text"
+            )
+        }
+        let bundles: [BeamBundle] = (0..<30).map { b in
+            BeamBundle(name: "Project \(Self.words[b % Self.words.count]) \(b)", rules: [
+                BundleRule(appBundleID: vsCode, key: "project\(b)", match: .exact),
+                BundleRule(appBundleID: vsCode, key: "project\(b)", match: .contains),
+                BundleRule(appBundleID: nil, key: "project\(b) / Notes", match: .contains),
+                BundleRule(appBundleID: "dev.test.\(b)", key: "Document", match: .contains),
+                BundleRule(appBundleID: "dev.test.\(b)", key: "x", match: .exact, sessionWindowID: UInt32(b + 1)),
+            ], files: ["/tmp/a"])
+        }
+        // Rule matching runs once when the panel opens (or the window list changes); only ranking runs per keystroke.
+        var summaries: [BundleSummary] = []
+        let counting = ContinuousClock().measure {
+            summaries = bundles.map {
+                BundleSummary(id: $0.id, name: $0.name, openWindows: BundleMatcher.windows(of: $0, in: windows).count, files: $0.files.count)
+            }
+        }
+        let worst = Self.worstKeystroke(typing: "project notes") {
+            BundleSearch.rank(windows: windows, bundles: summaries, query: $0).items.count
+        }
+        print("bundle rules, 30 bundles x 5 rules, 300 windows: \(counting); ranking: worst keystroke \(worst)")
+        #expect(counting < Self.frameBudget)
+        #expect(worst < Self.frameBudget)
+    }
+
     @Test func mruOrderingFitsAFrame() {
         var mru = MRUList()
         for window in Self.windows.shuffled() { mru.touch(window.id) }

@@ -24,7 +24,7 @@ Tools/install.sh        # or: build, install into /Applications and launch
 
 - `Packages/BeamKit/Sources/BeamCore` — pure logic with no UI: hotkey classification, the switcher state
   machine, fuzzy matching, ranking, the calculator gate. Anything testable without a window belongs here.
-- `Packages/BeamKit/Sources/BeamCalc` — the SoulverCore wrapper.
+- `Packages/BeamKit/Sources/BeamCalc` — the calculator engine wrapper.
 - `App/System` — event tap, Accessibility, window enumeration and focusing, settings storage.
 - `App/UI` — panels and SwiftUI views.
 
@@ -44,6 +44,12 @@ Tools/install.sh        # or: build, install into /Applications and launch
 5. Add a line to the `[Unreleased]` section of [CHANGELOG.md](CHANGELOG.md).
 
 ## Releasing (maintainers)
+
+One-time setup: run `Tools/make-signing-cert.sh` (it writes `private/signing/Beam.p12`; `private/` is git-ignored) and add the
+two values it prints as repository secrets `BEAM_SIGNING_P12_BASE64` and `BEAM_SIGNING_P12_PASSWORD` (GitHub ▸ Settings ▸
+Secrets and variables ▸ Actions). Every release is then signed with the same self-made "Beam" certificate, so macOS keeps
+Accessibility across updates. Keep `Beam.p12` safe and never commit it. Without the secrets this repository's release
+workflow fails on purpose (forks build ad-hoc). `Tools/build-release.sh <version>` builds the same zip locally.
 
 1. Move the `[Unreleased]` notes in `CHANGELOG.md` under a new version heading.
 2. Tag and push: `git tag v1.1.0 && git push origin v1.1.0`.

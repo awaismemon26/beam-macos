@@ -63,6 +63,31 @@ let allWindows = [
     safariWindows[3],
 ]
 
+// Made-up files and bundles. Paths sit under the home folder only so the folder column reads "~/Documents/…".
+let home = NSHomeDirectory()
+func sampleFile(_ folder: String, _ name: String) -> FileResult {
+    FileResult(path: "\(home)/\(folder)/\(name)", name: name, lastUsed: nil, modified: nil)
+}
+let invoiceFiles = [
+    sampleFile("Documents/Finance", "Invoice March.pdf"),
+    sampleFile("Documents/Templates", "invoice-template.docx"),
+    sampleFile("Desktop", "Invoices 2026.xlsx"),
+    sampleFile("Downloads", "invoice-scan.png"),
+]
+let beamFiles = [sampleFile("Documents/Beam", "Release checklist.md"), sampleFile("Documents/Beam", "Roadmap.pdf")]
+func fileIcon(_ file: FileResult) -> NSImage {
+    let type = UTType(filenameExtension: (file.name as NSString).pathExtension) ?? .data
+    return NSWorkspace.shared.icon(for: type)
+}
+
+let beamBundle = BeamBundle(name: "Beam release", rules: [BundleRule(appBundleID: nil, key: "Beam", match: .contains)],
+                            files: beamFiles.map(\.path))
+let planningBundle = BeamBundle(name: "Q4 planning", rules: [BundleRule(appBundleID: nil, key: "Q4", match: .contains),
+                                                             BundleRule(appBundleID: nil, key: "Inbox", match: .contains)])
+let tripBundle = BeamBundle(name: "Weekend trip", rules: [BundleRule(appBundleID: nil, key: "Weekend trip", match: .contains),
+                                                          BundleRule(appBundleID: nil, key: "Grocery", match: .contains)])
+let demoBundles = [beamBundle, planningBundle, tripBundle]
+
 // MARK: - Rendering
 
 @MainActor
@@ -195,9 +220,9 @@ var frames: [Frame] = []
 func run() async {
     // Root search (Option+Space).
     let root = RootSearchModel()
-    for (name, path) in appPaths { if let image = icon(path) { root.icons[path] = image } }
-    let rootView = RootSearchView(model: root, onQueryChange: {}, onMove: { _ in }, onSubmit: {}, onCancel: {},
-                                  onActivate: { _ in }, onSettings: {})
+    for (_, path) in appPaths { if let image = icon(path) { root.icons[path] = image } }
+    let rootView = RootSearchView(model: root, onQueryChange: {}, onMove: { _ in }, onRecall: { _ in false }, onSubmit: {},
+                                  onCancel: {}, onActivate: { _ in }, onSettings: {}, onKey: { _ in false })
     let rootRenderer = PanelRenderer(PanelChrome { rootView }, size: Theme.rootSize)
     let rootCaption = ("⌥ Space", "Launch apps and calculate")
 
@@ -222,9 +247,22 @@ func run() async {
     }
     await rootFrame("5 % of 5000", [.calculation(CalculationResult(expression: "5 % of 5000", value: "250"))], copied: true, 1.0)
 
+    // File search: `f ` in the launcher lists files inline.
+    for file in invoiceFiles { root.fileIcons.images[file.path] = fileIcon(file) }
+    func fileFrame(_ query: String, _ files: [FileResult], _ seconds: Double) async {
+        root.query = query
+        root.items = files.map(RootItem.file)
+        root.selection = 0
+        frames.append(Frame(image: compose(panel: await rootRenderer.capture(), caption: "⌥ Space → f",
+                                           subcaption: "Find files by name without leaving the keyboard"), seconds: seconds))
+    }
+    await fileFrame("f inv", invoiceFiles, 0.7)
+    await fileFrame("f invoice", invoiceFiles, 1.8)
+
     // Window search (Option+Tab).
     let search = WindowSearchModel()
-    let searchView = WindowSearchView(model: search, onMove: { _ in }, onSubmit: {}, onCancel: {}, onActivate: { _ in })
+    let searchView = WindowSearchView(model: search, onMove: { _ in }, onRecall: { _ in false }, onSubmit: {}, onCancel: {}, onActivate: { _ in },
+                                      onKey: { _ in false }, onBack: {})
     let searchRenderer = PanelRenderer(PanelChrome { searchView }, size: Theme.rootSize)
     search.all = allWindows
     func searchFrame(_ query: String, _ seconds: Double) async {
@@ -234,6 +272,25 @@ func run() async {
     await searchFrame("", 1.4)
     for (i, partial) in ["n", "no", "not", "note", "notes"].enumerated() { await searchFrame(partial, i == 4 ? 1.4 : 0.1) }
     for (i, partial) in ["s", "sa", "saf", "safa", "safar", "safari"].enumerated() { await searchFrame(partial, i == 5 ? 1.6 : 0.1) }
+
+    // Bundles: ⌘ G adds a window to a bundle; a bundle row opens its own view.
+    search.query = ""
+    search.bundles = demoBundles
+    search.bundleFiles = beamFiles.map { BundleFileItem(file: $0, isMissing: false) }
+    for file in beamFiles { search.fileIcons.images[file.path] = fileIcon(file) }
+    func bundleFrame(_ caption: String, _ subcaption: String, _ seconds: Double) async {
+        frames.append(Frame(image: compose(panel: await searchRenderer.capture(), caption: caption, subcaption: subcaption), seconds: seconds))
+    }
+    await bundleFrame("⌥ Tab", "Bundles: the windows and files of one project, together", 0.6)
+    search.selection = 0
+    await bundleFrame("⌥ Tab", "Bundles: the windows and files of one project, together", 1.4)
+    search.mode = .picker(.window(allWindows[1]))
+    await bundleFrame("⌘ G", "Add the highlighted window to a bundle", 1.6)
+    search.query = "Release"
+    await bundleFrame("⌘ G", "Add the highlighted window to a bundle", 0.9)
+    search.query = ""
+    search.mode = .bundle(beamBundle.id)
+    await bundleFrame("⏎ on a bundle", "Just its windows and files · ⌘ ⏎ brings them all forward", 2.2)
 
     // Switcher (Control+Tab).
     let switcher = SwitcherModel()

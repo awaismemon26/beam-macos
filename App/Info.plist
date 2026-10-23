@@ -29,6 +29,6 @@
 	<key>NSAccessibilityUsageDescription</key>
 	<string>Beam needs Accessibility access to list your windows and bring the one you pick to the front.</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Personal use.</string>
+	<string>Copyright © 2026 Awais Memon. MIT License.</string>
 </dict>
 </plist>

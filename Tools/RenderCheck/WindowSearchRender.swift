@@ -7,8 +7,8 @@ func w(_ id: UInt32, _ app: String, _ title: String) -> WindowInfo {
     WindowInfo(id: id, pid: pid_t(id % 7 + 100), appName: app, appSearchNames: [app], bundleID: nil, title: title,
                isMinimized: false, spaceNumber: nil, isOnCurrentSpace: true, isReachable: true)
 }
-let apps = ["Microsoft Outlook", "Claude", "Code - Insiders", "Paper", "Microsoft Teams", "App Store", "Code", "Activity Monitor",
-            "Podman Desktop", "draw.io", "Postman", "Bitwarden", "Calendar", "Obsidian", "iTerm2"]
+let apps = ["Mail", "Notes", "Reminders", "Safari", "Messages", "App Store", "Music", "Activity Monitor",
+            "Maps", "Photos", "Preview", "Terminal", "Calendar", "Freeform", "Xcode"]
 var windows: [WindowInfo] = []
 var nextID: UInt32 = 1000
 for (i, app) in apps.enumerated() {
@@ -30,7 +30,8 @@ for (i, app) in apps.enumerated() {
 
     func start() {
         model.all = windows
-        let view = WindowSearchView(model: model, onMove: { _ in }, onSubmit: {}, onCancel: {}, onActivate: { _ in })
+        let view = WindowSearchView(model: model, onMove: { _ in }, onRecall: { _ in false }, onSubmit: {}, onCancel: {}, onActivate: { _ in },
+                                    onKey: { _ in false }, onBack: {})
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 460), styleMask: [.borderless], backing: .buffered, defer: false)
         window.alphaValue = 0.01 // invisible to the user, still laid out and drawn
         window.contentView = NSHostingView(rootView: view)
@@ -48,7 +49,7 @@ for (i, app) in apps.enumerated() {
                 let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds)!
                 view.cacheDisplay(in: view.bounds, to: rep)
                 try! rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: CommandLine.arguments[1]))
-                print("model results:", model.results.map(\.title))
+                print("model results:", model.results.map(\.id))
                 exit(0)
             }
         }

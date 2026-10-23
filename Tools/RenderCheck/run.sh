@@ -9,7 +9,7 @@ trap 'rm -rf "$WORK"' EXIT
 
 strip() { sed 's/^import BeamCore$//' "$1"; }
 for f in "$ROOT"/Packages/BeamKit/Sources/BeamCore/*.swift; do strip "$f" > "$WORK/core_$(basename "$f")"; done
-for f in WindowSearchView WindowRow Theme SearchField ResultRow; do strip "$ROOT/App/UI/$f.swift" > "$WORK/$f.swift"; done
+for f in WindowSearchView WindowRow BundleRow BundlePicker FileRow Theme SearchField ResultRow; do strip "$ROOT/App/UI/$f.swift" > "$WORK/$f.swift"; done
 # Only the model part of the controller file (the controller needs the whole app).
 strip "$ROOT/App/UI/WindowSearchController.swift" | awk '/^\/\/\/ Option\+Tab/{exit} {print}' > "$WORK/WindowSearchModel.swift"
 cp "$ROOT/Tools/RenderCheck/WindowSearchRender.swift" "$WORK/main.swift"

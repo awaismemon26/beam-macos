@@ -5,31 +5,60 @@ struct RootSearchView: View {
     @Bindable var model: RootSearchModel
     let onQueryChange: () -> Void
     let onMove: (Int) -> Void
+    let onRecall: (Int) -> Bool
     let onSubmit: () -> Void
     let onCancel: () -> Void
     let onActivate: (Int) -> Void
     let onSettings: () -> Void
+    let onKey: (PanelKey) -> Bool
+
+    private var isFileView: Bool { model.mode == .files }
+
+    private var placeholder: String {
+        switch model.mode {
+        case .root: "Search apps or calculate…"
+        case .files: "Search files…"
+        case .picker: "Search bundles or name a new one…"
+        }
+    }
+
+    private var chip: String? {
+        switch model.mode {
+        case .root: nil
+        case .files: "Search Files"
+        case .picker: "Add to Bundle"
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             SearchField(
-                text: $model.query, placeholder: "Search apps or calculate…", focusTrigger: model.presentCount,
-                onMove: onMove, onSubmit: onSubmit, onCancel: onCancel, onCommandComma: onSettings
+                text: $model.query, placeholder: placeholder,
+                focusTrigger: model.presentCount,
+                onMove: onMove, onRecall: onRecall, onSubmit: onSubmit, onCancel: onCancel, onCommandComma: onSettings,
+                chip: chip, onKey: onKey
             )
             .onChange(of: model.query) { onQueryChange() }
             Divider().opacity(0.4)
-            list
+            if case let .picker(target) = model.mode {
+                BundlePicker(target: target, rows: model.pickerRows, selection: model.selection, onActivate: onActivate)
+            } else {
+                list
+            }
             Divider().opacity(0.4)
             footer
         }
         .frame(width: Theme.rootSize.width, height: Theme.rootSize.height)
+        .modifier(ShakeEffect(animatableData: CGFloat(model.shakes)))
     }
 
     private var list: some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical) {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    if model.query.isEmpty && !model.items.isEmpty {
+                    if case .file = model.items.first {
+                        sectionHeader("Files")
+                    } else if model.query.isEmpty && !model.items.isEmpty {
                         sectionHeader("Suggestions")
                     }
                     ForEach(Array(model.items.enumerated()), id: \.element.id) { index, item in
@@ -58,6 +87,8 @@ struct RootSearchView: View {
         case let .command(command):
             ResultRow(icon: nil, systemImage: command.systemImage, title: command.rawValue, subtitle: nil,
                       accessory: "Command", isSelected: isSelected)
+        case let .file(file):
+            FileRow(file: file, icon: model.fileIcons.images[file.path], isSelected: isSelected)
         }
     }
 
@@ -83,11 +114,14 @@ struct RootSearchView: View {
     }
 
     private var footerHint: String {
-        guard model.items.indices.contains(model.selection) else { return "esc close" }
+        if model.isPicker { return "⏎ add   esc back" }
+        let esc = model.mode == .files ? "esc back" : "esc close" // Esc leaves the Search Files view
+        guard model.items.indices.contains(model.selection) else { return esc }
         switch model.items[model.selection] {
-        case .calculation: return "⏎ copy answer   esc close"
-        case .app: return "⏎ open   esc close"
-        case .command: return "⏎ run   esc close"
+        case .calculation: return "⏎ copy answer   \(esc)"
+        case .app: return "⏎ open   \(esc)"
+        case .command: return "⏎ run   \(esc)"
+        case .file: return "⏎ show in Finder   ⌘⏎ open   ⌘G add to bundle   ⇧⌘G save search   \(esc)"
         }
     }
 }

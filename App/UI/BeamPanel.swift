@@ -47,15 +47,14 @@ final class BeamPanel: NSPanel {
         hostingView = hosting
     }
 
-    /// Shows the panel centred horizontally, in the upper third of the screen under the mouse.
-    func present() {
+    /// Shows the panel centred horizontally, in the upper third of `screen` (the one under the mouse when nil).
+    func present(on screen: NSScreen?) {
         if fitsContent, let hostingView {
             hostingView.layoutSubtreeIfNeeded()
             setContentSize(hostingView.fittingSize)
         }
-        let mouse = NSEvent.mouseLocation
-        let screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
-        if let visible = screen?.visibleFrame {
+        let target = screen ?? Self.screenUnderMouse()
+        if let visible = target?.visibleFrame {
             let size = frame.size
             let origin = NSPoint(
                 x: visible.midX - size.width / 2,
@@ -65,6 +64,11 @@ final class BeamPanel: NSPanel {
         }
         orderFrontRegardless()
         if acceptsKeyboard { makeKey() }
+    }
+
+    private static func screenUnderMouse() -> NSScreen? {
+        let mouse = NSEvent.mouseLocation
+        return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
     }
 
     /// Re-fits the size while visible, keeping the top edge fixed.

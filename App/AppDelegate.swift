@@ -11,6 +11,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     let settings = AppSettings()
     let calculator = CalculatorService()
+    /// Created only once this copy is the one that keeps running (`SingleInstance.resolve()`): loading reads, and
+    /// for an unreadable bundles.json moves aside, files a newer or still-running copy owns.
+    private var history: HistoryStore!
+    private var bundles: BundleStore!
     private var settingsWindow: NSWindow?
     private var settingsCloseToken: NSObjectProtocol?
 
@@ -25,6 +29,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     #endif
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        guard SingleInstance.resolve() else {
+            NSApp.terminate(nil)
+            return
+        }
+        history = HistoryStore()
+        bundles = BundleStore()
         settings.applyAppearance()
         installStatusItem()
         settings.onShowInMenuBarChange = { [weak self] visible in self?.statusItem?.isVisible = visible }
@@ -32,6 +42,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         LoginItem.applyDefaultOnce()
         rootSearch = RootSearchController(
             calculator: calculator,
+            settings: settings,
+            history: history,
+            bundles: bundles,
+            enumerator: enumerator,
             openWindowSearch: { [weak self] in self?.windowSearch?.show() },
             openSettings: { [weak self] in self?.openSettings() }
         )
@@ -43,6 +57,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         } else {
             showOnboarding()
         }
+    }
+
+    /// Debounced saves still waiting are written before Beam exits.
+    func applicationWillTerminate(_ notification: Notification) {
+        bundles?.flush() // nil when this copy handed over before loading anything
+        history?.flush()
+        rootSearch?.flush()
     }
 
     /// Everything that needs Accessibility access.
@@ -57,16 +78,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Task { _ = await enumerator.allWindows() } // warm the cache
 
         // Capture self directly: under @NSApplicationDelegateAdaptor, NSApp.delegate is SwiftUI's own object.
-        let tap = EventTap(rootSearch: settings.rootHotkey) { [weak self] action in
+        let tap = EventTap(bindings: settings.activeShortcuts) { [weak self] action in
             MainActor.assumeIsolated {
                 self?.perform(action)
             }
         }
-        switcher = SwitcherController(enumerator: enumerator, activity: activity) { [weak tap] open in
+        switcher = SwitcherController(enumerator: enumerator, activity: activity, settings: settings) { [weak tap] open in
             tap?.setSwitcherOpen(open)
         }
-        windowSearch = WindowSearchController(enumerator: enumerator, activity: activity)
-        settings.onRootHotkeyChange = { [weak tap] combo in tap?.setRootSearch(combo) }
+        windowSearch = WindowSearchController(
+            enumerator: enumerator, activity: activity, settings: settings, history: history, bundles: bundles)
+        settings.onShortcutsChange = { [weak tap] bindings in tap?.setBindings(bindings) }
         if tap.start() {
             eventTap = tap
         } else {
@@ -82,6 +104,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             windowSearch?.show()
         case .toggleRootSearch:
             rootSearch?.toggle()
+        case .openSearchFiles:
+            rootSearch?.showFileSearch()
+        case .openSettings:
+            openSettings()
         case .pass, .swallow, .reenableTap:
             break
         }
@@ -109,10 +135,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item.button?.image = MenuBarIcon.image
         let menu = NSMenu()
 
-        let open = NSMenuItem(title: "Open Beam", action: #selector(openBeam), keyEquivalent: " ")
-        open.keyEquivalentModifierMask = [.option]
+        let open = NSMenuItem(title: "Open Beam", action: #selector(openBeam), keyEquivalent: "")
         open.target = self
+        Self.showShortcut(self.settings.shortcuts.launcher, on: open)
         menu.addItem(open)
+        self.settings.onShortcutsEdited = { [weak open] bindings in
+            if let open { Self.showShortcut(bindings.launcher, on: open) }
+        }
 
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
@@ -137,6 +166,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem = item
     }
 
+    /// The menu item shows the Launcher's shortcut; none (or a key without a menu equivalent) shows nothing.
+    private static func showShortcut(_ combo: KeyCombo?, on item: NSMenuItem) {
+        let equivalent = combo?.menuKeyEquivalent
+        item.keyEquivalent = equivalent?.key ?? ""
+        item.keyEquivalentModifierMask = equivalent?.mask ?? []
+    }
+
     /// Opening Beam again (Spotlight, Finder, Dock) shows Settings — the way back when the menu-bar
     /// icon is hidden.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -149,6 +185,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc func openSettings() {
+        guard let history, let bundles else { return } // not set up yet (or handing over)
         if settingsWindow == nil {
             let window = NSWindow(
                 contentRect: NSRect(origin: .zero, size: SettingsView.size),
@@ -164,7 +201,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 lastUpdate: { await calculator.lastRatesUpdate },
                 refresh: { await calculator.refreshRates() }
             )
-            window.contentView = NSHostingView(rootView: SettingsView(settings: settings, rates: rates))
+            window.contentView = NSHostingView(rootView: SettingsView(settings: settings, history: history, bundles: bundles, rates: rates))
             window.center()
             // Drop the content on close so its views disappear: that ends hotkey recording and status polling.
             settingsCloseToken = NotificationCenter.default.addObserver(

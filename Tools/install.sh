@@ -11,7 +11,7 @@ if [ -n "$BEAM_TEAM_ID" ]; then
     SIGN=(BEAM_TEAM_ID="$BEAM_TEAM_ID" -allowProvisioningUpdates)
 else
     echo "note: no BEAM_TEAM_ID in .env; building unsigned. macOS will ask for Accessibility again after each rebuild."
-    # Hardened runtime must be off for ad-hoc builds, or macOS refuses to load SoulverCore.
+    # Hardened runtime must be off for ad-hoc builds, or macOS refuses to load the calculator framework.
     SIGN=(CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual ENABLE_HARDENED_RUNTIME=NO)
 fi
 LOG="$(mktemp)"

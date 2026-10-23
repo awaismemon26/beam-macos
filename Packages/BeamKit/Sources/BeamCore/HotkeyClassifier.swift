@@ -18,9 +18,6 @@ public struct KeyCombo: Hashable, Codable, Sendable {
         self.keyCode = keyCode
         self.modifiers = modifiers
     }
-
-    /// Option+Space.
-    public static let defaultRootSearch = KeyCombo(keyCode: KeyCode.space, modifiers: .option)
 }
 
 public enum KeyCode {
@@ -40,9 +37,12 @@ public enum RawKeyEvent: Sendable {
     case tapDisabled
 }
 
-/// Keys the Ctrl+Tab switcher reacts to.
+/// Keys the switcher (⌃Tab by default) reacts to.
 public enum SwitcherKey: Equatable, Sendable {
-    case tab(shift: Bool), enter, escape, controlReleased
+    /// The switcher's key; `shift` moves backwards.
+    case tab(shift: Bool), enter, escape
+    /// One of the switcher's held modifiers was released.
+    case controlReleased
 }
 
 public enum HotkeyAction: Equatable, Sendable {
@@ -51,17 +51,19 @@ public enum HotkeyAction: Equatable, Sendable {
     case switcher(SwitcherKey)
     case openWindowSearch
     case toggleRootSearch
+    case openSearchFiles
+    case openSettings
 }
 
 /// Decides, synchronously on the event-tap thread, what to do with each keyboard event.
 public struct HotkeyClassifier: Sendable {
-    public var rootSearch: KeyCombo
+    public var bindings: ShortcutBindings
     public var isSwitcherOpen = false
     /// Key codes whose keyDown was swallowed; their keyUp is swallowed too, whatever the modifiers then.
     private var swallowedDowns: Set<UInt16> = []
 
-    public init(rootSearch: KeyCombo = .defaultRootSearch) {
-        self.rootSearch = rootSearch
+    public init(bindings: ShortcutBindings = .defaults) {
+        self.bindings = bindings
     }
 
     public mutating func classify(_ event: RawKeyEvent) -> HotkeyAction {
@@ -70,8 +72,8 @@ public struct HotkeyClassifier: Sendable {
             return .reenableTap
 
         case let .keyDown(keyCode, mods, isRepeat):
-            // Control's release was missed (the tap was disabled at the time): close and let the key through.
-            if isSwitcherOpen && !mods.contains(.control) {
+            // A modifier's release was missed (the tap was disabled at the time): close and let the key through.
+            if isSwitcherOpen && !holdsSwitcherModifiers(mods) {
                 isSwitcherOpen = false
                 swallowedDowns.remove(keyCode)
                 return .switcher(.controlReleased)
@@ -82,7 +84,7 @@ public struct HotkeyClassifier: Sendable {
             } else {
                 swallowedDowns.insert(keyCode)
             }
-            // Track open/closed here, synchronously, so a quick Control release can't race the UI.
+            // Track open/closed here, synchronously, so a quick modifier release can't race the UI.
             switch action {
             case .switcher(.tab): isSwitcherOpen = true
             case .switcher(.escape): isSwitcherOpen = false
@@ -94,7 +96,7 @@ public struct HotkeyClassifier: Sendable {
             return swallowedDowns.remove(keyCode) != nil ? .swallow : .pass
 
         case let .flagsChanged(mods):
-            if isSwitcherOpen && !mods.contains(.control) {
+            if isSwitcherOpen && !holdsSwitcherModifiers(mods) {
                 isSwitcherOpen = false
                 return .switcher(.controlReleased)
             }
@@ -102,24 +104,40 @@ public struct HotkeyClassifier: Sendable {
         }
     }
 
+    /// The binding for `action` unless it is unusable (see `ShortcutBindings.sanitized`).
+    private func combo(_ action: ShortcutAction) -> KeyCombo? {
+        bindings[action].flatMap { $0.isUsable(for: action) ? $0 : nil }
+    }
+
+    /// The switcher stays open while every one of its modifiers is held. Unbound, it never stays open.
+    private func holdsSwitcherModifiers(_ mods: KeyModifiers) -> Bool {
+        guard let switcher = combo(.switcher) else { return false }
+        return mods.isSuperset(of: switcher.modifiers)
+    }
+
     private func classifyKeyDown(keyCode: UInt16, mods: KeyModifiers, isRepeat: Bool) -> HotkeyAction {
-        if keyCode == KeyCode.tab {
-            if mods.contains(.control) && mods.isDisjoint(with: [.command, .option]) {
-                return .switcher(.tab(shift: mods.contains(.shift)))
-            }
-            if mods == .option || mods == [.option, .shift] {
-                return isRepeat ? .swallow : .openWindowSearch
-            }
+        let switcher = combo(.switcher)
+        // The switcher and window search answer with or without ⇧; the others need their exact modifiers.
+        if let switcher, keyCode == switcher.keyCode, mods.subtracting(.shift) == switcher.modifiers {
+            return .switcher(.tab(shift: mods.contains(.shift)))
         }
-        if keyCode == rootSearch.keyCode && mods == rootSearch.modifiers {
-            return isRepeat ? .swallow : .toggleRootSearch
-        }
+        // While the switcher is open nothing else may fire: only Return, Escape and its own key count.
         if isSwitcherOpen {
             switch keyCode {
             case KeyCode.returnKey, KeyCode.keypadEnter: return .switcher(.enter)
             case KeyCode.escape: return .switcher(.escape)
             default: return .swallow
             }
+        }
+        if let search = combo(.windowSearch), keyCode == search.keyCode,
+           mods == search.modifiers || mods == search.modifiers.union(.shift) {
+            return isRepeat ? .swallow : .openWindowSearch
+        }
+        let exact: [(KeyCombo?, HotkeyAction)] = [
+            (combo(.launcher), .toggleRootSearch), (combo(.searchFiles), .openSearchFiles), (combo(.settings), .openSettings),
+        ]
+        for case let (combo?, action) in exact where keyCode == combo.keyCode && mods == combo.modifiers {
+            return isRepeat ? .swallow : action
         }
         return .pass
     }

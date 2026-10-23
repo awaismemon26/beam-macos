@@ -8,8 +8,14 @@ public enum WindowSearchRanker {
 
     /// Empty query returns `windows` unchanged (callers pass MRU order). Ties keep input order.
     public static func rank(_ windows: [WindowInfo], query: String) -> [WindowInfo] {
+        guard !FuzzyMatcher.normalize(query).isEmpty else { return windows }
+        return rankedMatches(windows, query: query).map(\.window)
+    }
+
+    /// The matching windows in `rank` order, each with its match (app-name or title). Empty for an empty query.
+    static func rankedMatches(_ windows: [WindowInfo], query: String) -> [(window: WindowInfo, match: FuzzyMatch)] {
         let q = FuzzyMatcher.normalize(query)
-        guard !q.isEmpty else { return windows }
+        guard !q.isEmpty else { return [] }
         let queries = ([q] + (aliases[q].map { [$0] } ?? [])).map(PreparedQuery.init)
         let titleQuery = PreparedQuery(q)
 
@@ -32,6 +38,6 @@ public enum WindowSearchRanker {
                               _ b: (offset: Int, match: FuzzyMatch, window: WindowInfo)) -> Bool {
             a.match != b.match ? a.match > b.match : a.offset < b.offset
         }
-        return appHits.sorted(by: byMatchThenOrder).map(\.window) + titleHits.sorted(by: byMatchThenOrder).map(\.window)
+        return (appHits.sorted(by: byMatchThenOrder) + titleHits.sorted(by: byMatchThenOrder)).map { ($0.window, $0.match) }
     }
 }

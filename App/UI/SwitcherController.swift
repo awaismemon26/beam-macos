@@ -20,6 +20,7 @@ final class SwitcherController {
 
     private let enumerator: WindowEnumerator
     private let activity: WindowActivityMonitor
+    private let settings: AppSettings
     private let setTapSwitcherOpen: (Bool) -> Void
     private let model = SwitcherModel()
     private let panel = BeamPanel(
@@ -30,9 +31,13 @@ final class SwitcherController {
     private var userMoved = false
     private var activationToken: NSObjectProtocol?
 
-    init(enumerator: WindowEnumerator, activity: WindowActivityMonitor, setTapSwitcherOpen: @escaping (Bool) -> Void) {
+    init(
+        enumerator: WindowEnumerator, activity: WindowActivityMonitor, settings: AppSettings,
+        setTapSwitcherOpen: @escaping (Bool) -> Void
+    ) {
         self.enumerator = enumerator
         self.activity = activity
+        self.settings = settings
         self.setTapSwitcherOpen = setTapSwitcherOpen
         panel.host(SwitcherView(model: model))
         DispatchQueue.main.async { [panel] in panel.warmUp() }
@@ -86,7 +91,7 @@ final class SwitcherController {
         switch command {
         case let .open(highlight):
             model.highlighted = highlight
-            panel.present()
+            panel.present(on: PanelScreens.screen(for: settings.panelScreen))
         case let .move(index):
             userMoved = true
             withAnimation(Theme.spring) { model.highlighted = index }

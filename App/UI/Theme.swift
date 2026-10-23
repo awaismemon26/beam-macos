@@ -49,3 +49,17 @@ struct ShakeEffect: GeometryEffect {
         ProjectionTransform(CGAffineTransform(translationX: travel * sin(animatableData * .pi * 4), y: 0))
     }
 }
+
+/// Small grey title above a group of rows ("Bundles", "Windows", "Files").
+struct SectionHeader: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 10)
+            .padding(.top, 4)
+            .padding(.bottom, 6)
+    }
+}

@@ -12,8 +12,8 @@ final class EventTap: @unchecked Sendable {
     /// Written once in `start()` before the tap thread runs; read only from the tap thread afterwards.
     private var machPort: CFMachPort?
 
-    init(rootSearch: KeyCombo, onAction: @escaping @Sendable (HotkeyAction) -> Void) {
-        classifier = Mutex(HotkeyClassifier(rootSearch: rootSearch))
+    init(bindings: ShortcutBindings, onAction: @escaping @Sendable (HotkeyAction) -> Void) {
+        classifier = Mutex(HotkeyClassifier(bindings: bindings))
         self.onAction = onAction
     }
 
@@ -47,8 +47,8 @@ final class EventTap: @unchecked Sendable {
         classifier.withLock { $0.isSwitcherOpen = open }
     }
 
-    func setRootSearch(_ combo: KeyCombo) {
-        classifier.withLock { $0.rootSearch = combo }
+    func setBindings(_ bindings: ShortcutBindings) {
+        classifier.withLock { $0.bindings = bindings }
     }
 
     fileprivate func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
@@ -70,7 +70,7 @@ final class EventTap: @unchecked Sendable {
         case .switcher(.controlReleased):
             dispatch(action)
             return Unmanaged.passUnretained(event) // modifier changes always reach the app
-        case .switcher, .openWindowSearch, .toggleRootSearch:
+        case .switcher, .openWindowSearch, .toggleRootSearch, .openSearchFiles, .openSettings:
             dispatch(action)
             return nil
         }

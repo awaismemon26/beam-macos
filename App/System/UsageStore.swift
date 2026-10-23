@@ -26,17 +26,23 @@ final class UsageStore {
 
     private func scheduleSave() {
         saveTask?.cancel()
-        let snapshot = stats
-        let url = url
-        saveTask = Task {
+        saveTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(1))
             guard !Task.isCancelled else { return }
-            do {
-                try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try JSONEncoder().encode(snapshot).write(to: url, options: .atomic)
-            } catch {
-                log.error("Saving usage failed: \(error.localizedDescription, privacy: .public)")
-            }
+            self?.flush()
+        }
+    }
+
+    /// Writes a pending save now (Beam is quitting).
+    func flush() {
+        guard let saveTask else { return }
+        saveTask.cancel()
+        self.saveTask = nil
+        do {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try JSONEncoder().encode(stats).write(to: url, options: .atomic)
+        } catch {
+            log.error("Saving usage failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 }
