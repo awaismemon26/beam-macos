@@ -14,21 +14,42 @@ struct RootSearchView: View {
 
     private var isFileView: Bool { model.mode == .files }
 
+    private var placeholder: String {
+        switch model.mode {
+        case .root: "Search apps or calculate…"
+        case .files: "Search files…"
+        case .picker: "Search bundles or name a new one…"
+        }
+    }
+
+    private var chip: String? {
+        switch model.mode {
+        case .root: nil
+        case .files: "Search Files"
+        case .picker: "Add to Bundle"
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             SearchField(
-                text: $model.query, placeholder: isFileView ? "Search files…" : "Search apps or calculate…",
+                text: $model.query, placeholder: placeholder,
                 focusTrigger: model.presentCount,
                 onMove: onMove, onRecall: onRecall, onSubmit: onSubmit, onCancel: onCancel, onCommandComma: onSettings,
-                chip: isFileView ? "Search Files" : nil, onKey: onKey
+                chip: chip, onKey: onKey
             )
             .onChange(of: model.query) { onQueryChange() }
             Divider().opacity(0.4)
-            list
+            if case let .picker(target) = model.mode {
+                BundlePicker(target: target, rows: model.pickerRows, selection: model.selection, onActivate: onActivate)
+            } else {
+                list
+            }
             Divider().opacity(0.4)
             footer
         }
         .frame(width: Theme.rootSize.width, height: Theme.rootSize.height)
+        .modifier(ShakeEffect(animatableData: CGFloat(model.shakes)))
     }
 
     private var list: some View {
@@ -93,12 +114,13 @@ struct RootSearchView: View {
     }
 
     private var footerHint: String {
+        if model.isPicker { return "⏎ add   esc back" }
         guard model.items.indices.contains(model.selection) else { return "esc close" }
         switch model.items[model.selection] {
         case .calculation: return "⏎ copy answer   esc close"
         case .app: return "⏎ open   esc close"
         case .command: return "⏎ run   esc close"
-        case .file: return "⏎ show in Finder   ⌘⏎ open   esc close"
+        case .file: return "⏎ show in Finder   ⌘⏎ open   ⌘G add to bundle   ⇧⌘G save search   esc close"
         }
     }
 }

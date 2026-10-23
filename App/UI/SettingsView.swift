@@ -3,7 +3,7 @@ import SwiftUI
 
 enum SettingsPane: String, CaseIterable, Identifiable {
     case general = "General", shortcuts = "Shortcuts", launcher = "Launcher", calculator = "Calculator"
-    case fileSearch = "File Search", about = "About"
+    case fileSearch = "File Search", bundles = "Bundles", about = "About"
 
     var id: Self { self }
 
@@ -14,6 +14,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .launcher: "magnifyingglass"
         case .calculator: "plus.forwardslash.minus"
         case .fileSearch: "doc.text.magnifyingglass"
+        case .bundles: "square.stack.3d.up.fill"
         case .about: "info.circle.fill"
         }
     }
@@ -25,6 +26,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .launcher: .blue
         case .calculator: .green
         case .fileSearch: .teal
+        case .bundles: .pink
         case .about: .indigo
         }
     }
@@ -40,12 +42,14 @@ struct RatesStatus {
 struct SettingsView: View {
     @Bindable var settings: AppSettings
     let history: HistoryStore
+    let bundles: BundleStore
     let rates: RatesStatus
     @State private var pane: SettingsPane
 
-    init(settings: AppSettings, history: HistoryStore, rates: RatesStatus, initialPane: SettingsPane = .general) {
+    init(settings: AppSettings, history: HistoryStore, bundles: BundleStore, rates: RatesStatus, initialPane: SettingsPane = .general) {
         self.settings = settings
         self.history = history
+        self.bundles = bundles
         self.rates = rates
         _pane = State(initialValue: initialPane)
     }
@@ -64,6 +68,7 @@ struct SettingsView: View {
                     case .launcher: LauncherSettings(settings: settings, history: history)
                     case .calculator: CalculatorSettings(settings: settings, rates: rates)
                     case .fileSearch: FileSearchSettings(settings: settings)
+                    case .bundles: BundlesSettings(store: bundles)
                     case .about: AboutSettings()
                     }
                 }

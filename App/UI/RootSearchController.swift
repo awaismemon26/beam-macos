@@ -43,7 +43,11 @@ enum RootItem: Identifiable, Equatable {
 }
 
 /// `root`: apps, commands, calculations (and inline files for `f …`). `files`: the Search Files view.
-enum RootMode { case root, files }
+/// `picker`: ⌘ G / ⇧⌘ G's bundle list, shown in place of the results.
+enum RootMode: Equatable {
+    case root, files
+    case picker(PickerTarget)
+}
 
 @MainActor @Observable
 final class RootSearchModel {
@@ -55,6 +59,14 @@ final class RootSearchModel {
     var showsCopied = false
     var icons: [String: NSImage] = [:]
     let fileIcons = FileIcons()
+    /// The list in `picker` mode.
+    var pickerRows: [BundlePickerRow] = []
+    /// Bumped to shake the panel (a bundle can't be created without a name).
+    var shakes = 0
+
+    var isPicker: Bool {
+        if case .picker = mode { true } else { false }
+    }
 }
 
 /// Option+Space: launch apps, run calculations, jump to window search.
@@ -63,6 +75,8 @@ final class RootSearchController {
     private let calculator: CalculatorService
     private let settings: AppSettings
     private let history: HistoryStore
+    private let store: BundleStore
+    private let enumerator: WindowEnumerator
     private let appIndex = AppIndex()
     private let usage = UsageStore()
     private let model = RootSearchModel()
@@ -77,6 +91,12 @@ final class RootSearchController {
     private var calcTask: Task<Void, Never>?
     private var calcResult: CalculationResult?
     private var navigator = HistoryNavigator()
+    /// Where the picker returns to (Esc, or after adding): the list it was opened from.
+    private var pickerReturn: (mode: RootMode, query: String, rowID: String?) = (.root, "", nil)
+    /// The row to highlight once the restored query has rebuilt the list.
+    private var pendingRowID: String?
+    /// Bundles with their open-window counts, for the picker's rows.
+    private var summaries: [BundleSummary] = []
     /// The query set by ↑/↓ recall, so the change it causes is not mistaken for typing.
     private var recalledQuery: String?
     private static let rateRefreshInterval: Duration = .seconds(6 * 3600)
@@ -84,10 +104,13 @@ final class RootSearchController {
     private static let inlineFileLimit = 8
     private static let fileViewLimit = 50
 
-    init(calculator: CalculatorService, settings: AppSettings, history: HistoryStore, openWindowSearch: @escaping () -> Void, openSettings: @escaping () -> Void) {
+    init(calculator: CalculatorService, settings: AppSettings, history: HistoryStore, bundles: BundleStore, enumerator: WindowEnumerator,
+         openWindowSearch: @escaping () -> Void, openSettings: @escaping () -> Void) {
         self.calculator = calculator
         self.settings = settings
         self.history = history
+        self.store = bundles
+        self.enumerator = enumerator
         self.openWindowSearch = openWindowSearch
         self.openSettings = openSettings
         panel.host(RootSearchView(
@@ -159,7 +182,11 @@ final class RootSearchController {
 
     /// Esc: back from the Search Files view to the launcher, else close.
     private func cancel() {
-        if model.mode == .files { setMode(.root) } else { dismiss() }
+        switch model.mode {
+        case .files: setMode(.root)
+        case .picker: leavePicker()
+        case .root: dismiss()
+        }
     }
 
     private func setMode(_ mode: RootMode) {
@@ -172,19 +199,86 @@ final class RootSearchController {
     private func handle(_ key: PanelKey) -> Bool {
         switch key {
         case .commandReturn:
-            guard model.items.indices.contains(model.selection),
+            guard !model.isPicker, model.items.indices.contains(model.selection),
                   case let .file(file) = model.items[model.selection] else { return false }
             recordQuery()
             dismiss()
             NSWorkspace.shared.open(URL(fileURLWithPath: file.path))
             return true
         case .backspaceOnEmpty:
-            guard model.mode == .files else { return false }
-            setMode(.root)
+            switch model.mode {
+            case .files: setMode(.root)
+            case .picker: leavePicker()
+            case .root: return false
+            }
             return true
-        case .addToBundle, .saveSearchToBundle, .removeFromBundle, .left, .right:
+        case .addToBundle:
+            guard !model.isPicker, model.items.indices.contains(model.selection),
+                  case let .file(file) = model.items[model.selection] else { return false }
+            openPicker(for: .file(file.path))
+            return true
+        case .saveSearchToBundle:
+            // The file-search words, without the `f ` prefix.
+            guard !model.isPicker, let terms = fileTerms, !terms.isEmpty else { return false }
+            openPicker(for: .savedSearch(terms.joined(separator: " ")))
+            return true
+        case .left:
+            guard model.isPicker, model.query.isEmpty else { return false } // ← moves the caret while there is text
+            leavePicker()
+            return true
+        case .removeFromBundle, .right:
             return false
         }
+    }
+
+    // MARK: Picker
+
+    private func openPicker(for target: PickerTarget) {
+        guard !model.isPicker else { return }
+        pickerReturn = (model.mode, model.query, model.items.indices.contains(model.selection) ? model.items[model.selection].id : nil)
+        fileSearcher.cancel() // a live query keeps watching the disk; leaving the picker restarts it
+        navigator.reset()
+        Task {
+            // Open-window counts come from the last enumeration; the row text is wrong without them.
+            let windows = await enumerator.cachedWindows()
+            guard panel.isVisible, !model.isPicker else { return }
+            summaries = store.bundles.map { bundle in
+                BundleSummary(id: bundle.id, name: bundle.name,
+                              openWindows: BundleMatcher.windows(of: bundle, in: windows).count, files: bundle.files.count)
+            }
+            model.mode = .picker(target)
+            model.query = ""
+            rebuildPicker()
+        }
+    }
+
+    private func rebuildPicker() {
+        let picker = BundleSearch.pickerRows(bundles: summaries, query: model.query)
+        model.pickerRows = picker.rows
+        model.selection = picker.selection
+    }
+
+    private func leavePicker() {
+        guard model.isPicker else { return }
+        model.mode = pickerReturn.mode
+        pendingRowID = pickerReturn.rowID
+        model.query = pickerReturn.query // the change rebuilds the list and runs the file search again
+    }
+
+    /// ⏎ in the picker: adds the target to the bundle, creating it first for "New bundle", then goes back.
+    private func pick(_ index: Int, for target: PickerTarget) {
+        guard model.pickerRows.indices.contains(index) else { return }
+        model.selection = index
+        let id: UUID
+        switch model.pickerRows[index] {
+        case let .bundle(bundle):
+            id = bundle.id
+        case let .newBundle(name):
+            guard !name.isEmpty else { return withAnimation(.linear(duration: 0.3)) { model.shakes += 1 } } // type a name first
+            id = store.create(named: name).id
+        }
+        store.add(target, to: id)
+        leavePicker()
     }
 
     private func reloadApps() async {
@@ -194,6 +288,11 @@ final class RootSearchController {
 
     private func queryChanged() {
         let signpost = Signpost.begin("root.query")
+        if model.isPicker {
+            navigator.reset()
+            rebuildPicker()
+            return
+        }
         let query = model.query
         if query == recalledQuery {
             recalledQuery = nil
@@ -203,7 +302,8 @@ final class RootSearchController {
         calcResult = nil
         updateFileSearch()
         rebuildItems()
-        model.selection = 0
+        model.selection = pendingRowID.flatMap { id in model.items.firstIndex { $0.id == id } } ?? 0
+        pendingRowID = nil
         Signpost.end("root.query", signpost)
 
         calcTask?.cancel()
@@ -223,6 +323,7 @@ final class RootSearchController {
     private func updateFileSearch() {
         let text: String? = switch model.mode {
         case .files: model.query
+        case .picker: nil
         case .root: settings.fileSearchEnabled ? FileQuery.prefixedTerms(model.query) : nil
         }
         guard let text else { return endFileSearch() }
@@ -313,7 +414,7 @@ final class RootSearchController {
     /// browsing), so the reset matters for Tab/⇧Tab: after a recall, a later ↑ moves the selection.
     private func move(_ delta: Int) {
         navigator.reset()
-        let count = model.items.count
+        let count = model.isPicker ? model.pickerRows.count : model.items.count
         guard count > 0 else { return }
         withAnimation(Theme.spring) { model.selection = (model.selection + delta + count) % count }
     }
@@ -325,6 +426,7 @@ final class RootSearchController {
     }
 
     private func activate(_ index: Int) {
+        if case let .picker(target) = model.mode { return pick(index, for: target) }
         guard model.items.indices.contains(index) else { return }
         recordQuery()
         switch model.items[index] {
