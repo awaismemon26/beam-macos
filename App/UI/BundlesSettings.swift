@@ -5,11 +5,12 @@ import SwiftUI
 /// The bundles and, for one chosen bundle, its name, window rules, files and saved searches.
 struct BundlesSettings: View {
     let store: BundleStore
+    let settings: AppSettings
     @State private var selected: UUID?
 
     var body: some View {
         if let selected, store.bundle(selected) != nil {
-            BundleDetail(store: store, id: selected) { self.selected = nil }
+            BundleDetail(store: store, settings: settings, id: selected) { self.selected = nil }
         } else {
             list
         }
@@ -74,6 +75,7 @@ struct BundlesSettings: View {
 
 private struct BundleDetail: View {
     let store: BundleStore
+    let settings: AppSettings
     let id: UUID
     let onBack: () -> Void
 
@@ -85,8 +87,9 @@ private struct BundleDetail: View {
 
     private static let home = FileManager.default.homeDirectoryForCurrentUser.path
 
-    init(store: BundleStore, id: UUID, onBack: @escaping () -> Void) {
+    init(store: BundleStore, settings: AppSettings, id: UUID, onBack: @escaping () -> Void) {
         self.store = store
+        self.settings = settings
         self.id = id
         self.onBack = onBack
         _name = State(initialValue: store.bundle(id)?.name ?? "")
@@ -320,6 +323,10 @@ private struct BundleDetail: View {
         guard !text.isEmpty else { return }
         store.addSavedSearch(FileQuery.prefixedTerms(text) ?? text, to: id) // a typed `f ` prefix is not part of it
         newSearch = ""
+        // The bundle view runs saved searches even while File Search is off, and macOS has then never been asked
+        // for folder access: ask now, while the user is in Settings, not when the bundle opens (a prompt takes
+        // focus and would close the panel). With File Search on, turning it on already asked.
+        if !settings.fileSearchEnabled { FileSearcher.touchScopes(settings.fileScopes) }
     }
 }
 

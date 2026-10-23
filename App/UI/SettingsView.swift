@@ -68,7 +68,7 @@ struct SettingsView: View {
                     case .launcher: LauncherSettings(settings: settings, history: history)
                     case .calculator: CalculatorSettings(settings: settings, rates: rates)
                     case .fileSearch: FileSearchSettings(settings: settings)
-                    case .bundles: BundlesSettings(store: bundles)
+                    case .bundles: BundlesSettings(store: bundles, settings: settings)
                     case .about: AboutSettings()
                     }
                 }
