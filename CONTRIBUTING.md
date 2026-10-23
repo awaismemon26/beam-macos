@@ -55,7 +55,8 @@ workflow fails on purpose (forks build ad-hoc). `Tools/build-release.sh <version
 2. Tag and push: `git tag v1.1.0 && git push origin v1.1.0`.
 3. The **Release** workflow tests, builds a universal `Beam-<version>.dmg` with a SHA-256 checksum and creates a
    **draft** GitHub release with the changelog notes. Review it and click **Publish**.
-4. Copy the release's `beam.rb` to `Casks/beam.rb` in [awaismemon26/homebrew-tap](https://github.com/awaismemon26/homebrew-tap)
-   and push, so `brew upgrade` picks up the new version.
+4. Homebrew: the tap ([awaismemon26/homebrew-tap](https://github.com/awaismemon26/homebrew-tap)) checks for new releases
+   daily and opens a pull request that bumps `Casks/beam.rb`; merge it. You can also run its **Bump versions** workflow
+   by hand, or copy the release's `beam.rb` into `Casks/` yourself.
 
 By contributing, you agree that your contributions are licensed under the [MIT License](LICENSE).
