@@ -17,7 +17,7 @@ Tools/install.sh                           # Release build → /Applications/Bea
 Tools/RenderCheck/run.sh                   # renders the ⌥Tab view offscreen and checks rows via OCR (no permissions)
 swift Tools/LiveTests/LiveTests.swift      # end-to-end against the installed, running Beam (see below)
 Tools/Demo/run.sh                          # regenerate assets/demo.gif after UI changes
-Tools/build-release.sh 1.2.0               # dist/Beam-1.2.0.zip + .sha256, the same build CI and releases use
+Tools/build-release.sh 1.2.0               # dist/Beam-1.2.0.dmg + .sha256, the same build CI and releases use
 ```
 
 - Edit `project.yml`, never the generated project. The version lives in `MARKETING_VERSION` there.
@@ -101,7 +101,13 @@ is off by default, and only one query is live at a time.
 - In CI, `release.yml` imports the certificate from the secrets `BEAM_SIGNING_P12_BASE64` and
   `BEAM_SIGNING_P12_PASSWORD`. It fails on purpose in this repository when they are missing; forks build ad-hoc.
 - To release: move the `[Unreleased]` CHANGELOG notes under a version heading, then push a `vX.Y.Z` tag. The Release
-  workflow builds and creates a **draft** release, using notes from `Tools/release-notes.sh`.
+  workflow builds and creates a **draft** release, using notes from `Tools/release-notes.sh`. The draft carries:
+  - the disk image, built by `Tools/DMG/make-dmg.sh` with dmgbuild. Its background is drawn by
+    `Tools/DMG/DrawBackground.swift`, and its icon positions must match `Tools/DMG/settings.py`;
+  - `beam.rb`, the Homebrew cask from `Tools/homebrew-cask.sh`, which goes into the separate repository
+    `awaismemon26/homebrew-tap`.
+- Beam isn't notarized (there's no Apple Developer ID). The first launch therefore needs **Open Anyway**, and the
+  official Homebrew cask repository won't accept Beam; it's installed from the tap instead.
 - Local team-signed builds and release builds are different identities to macOS. Switching between them needs
   Accessibility granted again.
 

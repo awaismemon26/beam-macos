@@ -42,11 +42,17 @@ Jump to any window, launch apps, find files and calculate — from the keyboard.
 
 ## Install
 
-1. Download **`Beam-<version>.zip`** from the [latest release](https://github.com/awaismemon26/beam-macos/releases/latest),
-   unzip it and drag **Beam.app** into **Applications**.
-2. Open Beam. The first time, macOS can't verify it (Beam isn't notarized yet): open
-   **System Settings ▸ Privacy & Security** and click **Open Anyway**.
-3. Turn on **Accessibility** for Beam when asked. That's it.
+1. Download **`Beam-<version>.dmg`** from the [latest release](https://github.com/awaismemon26/beam-macos/releases/latest),
+   open it and drag **Beam** into **Applications**.
+2. Open Beam. Beam isn't notarized yet, so the first time macOS says it can't verify it. Click **Done** (not
+   Move to Trash), then open **System Settings ▸ Privacy & Security**, scroll down and click **Open Anyway**.
+3. Open Beam again and turn on **Accessibility** when it asks. That's it.
+
+Or install with [Homebrew](https://brew.sh) (step 2 still applies the first time):
+
+```bash
+brew install --cask awaismemon26/tap/beam
+```
 
 Updates keep the Accessibility permission. Coming from 1.0.0, grant it once more.
 

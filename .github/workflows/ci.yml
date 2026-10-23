@@ -42,5 +42,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: Beam-ci-${{ github.run_number }}
-          path: dist/*.zip
+          path: dist/*.dmg
           retention-days: 7

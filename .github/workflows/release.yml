@@ -1,7 +1,8 @@
 name: Release
 
 # Push a tag like v1.1.0: tests, builds the universal app and creates a *draft* GitHub release with the
-# CHANGELOG notes, the zip and its SHA-256. Review the draft and click Publish.
+# CHANGELOG notes, the disk image, its SHA-256 and the Homebrew cask (beam.rb). Review the draft and click Publish, then copy
+# beam.rb to Casks/ in github.com/awaismemon26/homebrew-tap.
 on:
   push:
     tags: ["v*"]
@@ -64,6 +65,9 @@ jobs:
       - name: Release notes
         run: Tools/release-notes.sh "$GITHUB_REF_NAME" > release-notes.md
 
+      - name: Homebrew cask
+        run: Tools/homebrew-cask.sh "$GITHUB_REF_NAME" > dist/beam.rb
+
       - name: Create draft release
         uses: softprops/action-gh-release@v3
         with:
@@ -71,8 +75,9 @@ jobs:
           name: Beam ${{ github.ref_name }}
           body_path: release-notes.md
           files: |
-            dist/Beam-*.zip
-            dist/Beam-*.zip.sha256
+            dist/Beam-*.dmg
+            dist/Beam-*.dmg.sha256
+            dist/beam.rb
 
       - name: Delete signing keychain
         if: always()

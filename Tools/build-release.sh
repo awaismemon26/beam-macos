@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds the distributable Beam.app and packages it as dist/Beam-<version>.zip plus a SHA-256 checksum.
+# Builds the distributable Beam.app and packages it as dist/Beam-<version>.dmg plus a SHA-256 checksum.
 # Used by the release workflow. The build is ad-hoc signed; when BEAM_SIGNING_IDENTITY names a keychain
 # identity (e.g. "Beam", see Tools/make-signing-cert.sh) the app is re-signed with it afterwards, so every
 # release shares one designated requirement and macOS keeps Accessibility across updates.
@@ -48,9 +48,8 @@ if LC_ALL=C grep -a -q -E "/Users/|/home/runner" "$APP/Contents/MacOS/Beam"; the
     echo "error: build paths found in the Beam binary"; exit 1
 fi
 mkdir -p dist
-ZIP="dist/Beam-$VERSION.zip"
-rm -f "$ZIP"
-ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
-(cd dist && shasum -a 256 "Beam-$VERSION.zip" > "Beam-$VERSION.zip.sha256")
-echo "Built $ZIP ($(du -h "$ZIP" | cut -f1)), version $VERSION ($BUILD)"
-cat "dist/Beam-$VERSION.zip.sha256"
+DMG="dist/Beam-$VERSION.dmg"
+Tools/DMG/make-dmg.sh "$APP" "$DMG"
+(cd dist && shasum -a 256 "Beam-$VERSION.dmg" > "Beam-$VERSION.dmg.sha256")
+echo "Built $DMG ($(du -h "$DMG" | cut -f1)), version $VERSION ($BUILD)"
+cat "dist/Beam-$VERSION.dmg.sha256"

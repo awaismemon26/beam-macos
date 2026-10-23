@@ -24,6 +24,8 @@ Upgrading from 1.0.0: grant Accessibility once more; future updates keep it.
 
 ### Changed
 
+- Beam now comes as a disk image with the install and first-launch steps inside, and installs with Homebrew:
+  `brew install --cask awaismemon26/tap/beam`.
 - Updates keep the Accessibility permission.
 - Only one Beam runs at a time; opening a newer version replaces the older one.
 - Settings reorganised: General, Shortcuts, Launcher, Calculator, File Search, Bundles, About.
