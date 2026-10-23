@@ -27,7 +27,13 @@ jobs:
 
       - name: Unit tests (BeamKit)
         working-directory: Packages/BeamKit
-        run: swift test
+        run: swift test --skip PerformanceTests
+
+      # Timing budgets are checked on an optimised build, the way Beam ships: debug timings on shared runners
+      # are too noisy to gate on.
+      - name: Performance tests (release build)
+        working-directory: Packages/BeamKit
+        run: swift test -c release -Xswiftc -enable-testing --filter PerformanceTests
 
       # Signs with the stable "Beam" certificate so macOS keeps Accessibility across updates. Without the
       # secrets, forks fall back to ad-hoc signing and say so in the log; Beam's own repository fails instead,
