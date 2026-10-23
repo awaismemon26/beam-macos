@@ -77,7 +77,7 @@ only network request is for currency exchange rates.
 `Tools/install.sh` builds and installs Beam (needs Xcode 26+ and `brew install xcodegen`). See
 [CONTRIBUTING.md](CONTRIBUTING.md) for development and tests, and [CHANGELOG.md](CHANGELOG.md) for release history.
 
-## License
+## License and credits
 
-[MIT](LICENSE). Reaching windows on other Desktops follows the technique documented by
-[AltTab](https://github.com/lwouis/alt-tab-macos).
+[MIT](LICENSE). Calculator powered by [SoulverCore](https://github.com/soulverteam/SoulverCore). Reaching windows on
+other Desktops follows the technique documented by [AltTab](https://github.com/lwouis/alt-tab-macos).

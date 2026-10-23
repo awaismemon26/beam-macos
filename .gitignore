@@ -7,4 +7,5 @@ DerivedData/
 .DS_Store
 .env
 dist/
-docs/
+private/
+*.p12

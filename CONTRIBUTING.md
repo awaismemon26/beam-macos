@@ -45,7 +45,7 @@ Tools/install.sh        # or: build, install into /Applications and launch
 
 ## Releasing (maintainers)
 
-One-time setup: run `Tools/make-signing-cert.sh` (it writes `~/BeamSigning/Beam.p12`, outside the repository) and add the
+One-time setup: run `Tools/make-signing-cert.sh` (it writes `private/signing/Beam.p12`; `private/` is git-ignored) and add the
 two values it prints as repository secrets `BEAM_SIGNING_P12_BASE64` and `BEAM_SIGNING_P12_PASSWORD` (GitHub ▸ Settings ▸
 Secrets and variables ▸ Actions). Every release is then signed with the same self-made "Beam" certificate, so macOS keeps
 Accessibility across updates. Keep `Beam.p12` safe and never commit it. Without the secrets this repository's release

@@ -107,8 +107,11 @@ is off by default, and only one query is live at a time.
 
 ## Conventions
 
-- Public docs (README, CHANGELOG, About pane) stay short and user-facing. They never name the calculator engine and
-  carry no developer detail; developer detail goes in CONTRIBUTING.md.
-- `docs/` (specs, plans, `KNOWN_LIMITS.md`) and `.superpowers/` are local-only and git-ignored.
+- Public docs (README, CHANGELOG, About pane) stay short and user-facing; developer detail goes in CONTRIBUTING.md.
+  SoulverCore is used with Soulver's permission on the condition that the README keeps the line "Calculator powered
+  by SoulverCore" with its link. Don't remove it.
+- `private/` is git-ignored and holds what must never be pushed: `signing/Beam.p12` (the release certificate, see
+  `private/README.md`) and `docs/` (specs, plans, `KNOWN_LIMITS.md`). `git clean -fdx` would delete it, so never run
+  it here. `.superpowers/` (agent workspace) and `.env` are also local-only.
 - When testing on this machine, quit or relaunch only Beam, never other apps. Leave Beam's settings as you found
   them. Don't reset TCC permissions.

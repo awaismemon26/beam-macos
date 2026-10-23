@@ -1,13 +1,13 @@
 #!/bin/bash
 # Creates Beam's release signing certificate once: a self-signed code-signing identity named "Beam"
 # (10 years, RSA 2048) exported as Beam.p12 with a random password. Signing every release with the
-# same certificate lets macOS keep Accessibility across updates. Writes nothing inside the repo.
+# same certificate lets macOS keep Accessibility across updates. The default folder is git-ignored.
 #
-#   Tools/make-signing-cert.sh [out-dir]     (default: ~/BeamSigning)
+#   Tools/make-signing-cert.sh [out-dir]     (default: private/signing)
 set -euo pipefail
-OUT="${1:-$HOME/BeamSigning}"
+OUT="${1:-$(cd "$(dirname "$0")/.." && pwd)/private/signing}"
 mkdir -p "$OUT"
-chmod 700 "$OUT"
+chmod 700 "$OUT" "$(dirname "$OUT")"
 [ -e "$OUT/Beam.p12" ] && { echo "error: $OUT/Beam.p12 already exists; remove it to make a new certificate"; exit 1; }
 
 OPENSSL=/usr/bin/openssl   # the system one: its .p12 encryption is what `security import` accepts (OpenSSL 3's is not)
