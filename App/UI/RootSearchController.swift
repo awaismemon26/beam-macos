@@ -242,10 +242,7 @@ final class RootSearchController {
             // Open-window counts come from the last enumeration; the row text is wrong without them.
             let windows = await enumerator.cachedWindows()
             guard panel.isVisible, !model.isPicker else { return }
-            summaries = store.bundles.map { bundle in
-                BundleSummary(id: bundle.id, name: bundle.name,
-                              openWindows: BundleMatcher.windows(of: bundle, in: windows).count, files: bundle.files.count)
-            }
+            summaries = store.bundles.map { BundleSummary($0, windows: windows) }
             model.mode = .picker(target)
             model.query = ""
             rebuildPicker()
@@ -256,6 +253,10 @@ final class RootSearchController {
         let picker = BundleSearch.pickerRows(bundles: summaries, query: model.query)
         model.pickerRows = picker.rows
         model.selection = picker.selection
+    }
+
+    private func shake() {
+        withAnimation(.linear(duration: 0.3)) { model.shakes += 1 }
     }
 
     private func leavePicker() {
@@ -269,15 +270,7 @@ final class RootSearchController {
     private func pick(_ index: Int, for target: PickerTarget) {
         guard model.pickerRows.indices.contains(index) else { return }
         model.selection = index
-        let id: UUID
-        switch model.pickerRows[index] {
-        case let .bundle(bundle):
-            id = bundle.id
-        case let .newBundle(name):
-            guard !name.isEmpty else { return withAnimation(.linear(duration: 0.3)) { model.shakes += 1 } } // type a name first
-            id = store.create(named: name).id
-        }
-        store.add(target, to: id)
+        guard store.add(target, toRow: model.pickerRows[index]) else { return shake() } // type a name first
         leavePicker()
     }
 
@@ -287,12 +280,12 @@ final class RootSearchController {
     }
 
     private func queryChanged() {
-        let signpost = Signpost.begin("root.query")
         if model.isPicker {
             navigator.reset()
             rebuildPicker()
             return
         }
+        let signpost = Signpost.begin("root.query")
         let query = model.query
         if query == recalledQuery {
             recalledQuery = nil

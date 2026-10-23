@@ -46,11 +46,11 @@ public struct BundleRule: Codable, Equatable, Sendable {
 }
 
 public enum BundleMatcher {
-    /// An empty key matches nothing, so a half-edited rule never swallows every window.
+    /// An empty or blank key matches nothing, so a half-edited rule never swallows every window.
     public static func matches(_ rule: BundleRule, _ window: WindowInfo) -> Bool {
         if let sessionWindowID = rule.sessionWindowID { return window.id == sessionWindowID }
         if let app = rule.appBundleID, app != window.bundleID { return false }
-        guard !rule.key.isEmpty else { return false }
+        guard !rule.key.allSatisfy(\.isWhitespace) else { return false }
         switch rule.match {
         case .exact:
             guard let key = TitleKey.extract(appBundleID: window.bundleID, title: window.title) else { return false }

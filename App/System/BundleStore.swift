@@ -98,6 +98,21 @@ final class BundleStore {
         }
     }
 
+    /// Adds `target` to the bundle a picker row stands for, creating it first for "New bundle". False (nothing
+    /// added) when that row has no name yet.
+    func add(_ target: PickerTarget, toRow row: BundlePickerRow) -> Bool {
+        let id: UUID
+        switch row {
+        case let .bundle(bundle):
+            id = bundle.id
+        case let .newBundle(name):
+            guard !name.isEmpty else { return false }
+            id = create(named: name).id
+        }
+        add(target, to: id)
+        return true
+    }
+
     /// Replaces one bundle's rules (the Settings rule editor edits the whole list).
     func setRules(_ rules: [BundleRule], for id: UUID) {
         update(id) { $0.rules = rules }

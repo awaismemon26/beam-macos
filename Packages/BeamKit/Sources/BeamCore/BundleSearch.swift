@@ -15,6 +15,12 @@ public struct BundleSummary: Hashable, Sendable {
         self.files = files
     }
 
+    /// The summary of `bundle`, counting its members among `windows`.
+    public init(_ bundle: BeamBundle, windows: [WindowInfo]) {
+        self.init(id: bundle.id, name: bundle.name, openWindows: BundleMatcher.windows(of: bundle, in: windows).count,
+                  files: bundle.files.count)
+    }
+
     /// The grey text after the name: "4 windows", "1 window" or "no open windows", plus ", 2 files" when it has any.
     public var countText: String {
         let windows = switch openWindows {

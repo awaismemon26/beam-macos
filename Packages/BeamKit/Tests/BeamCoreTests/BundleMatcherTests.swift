@@ -49,6 +49,17 @@ import Testing
         #expect(BundleMatcher.matches(r, chrome))
     }
 
+    @Test func blankKeyMatchesNothing() {
+        for key in [" ", "  ", "\t", " \n"] {
+            for match in [BundleRule.Match.contains, .exact] {
+                for window in [flagsmith, flagsmithAPI, mentions, otherApp, chrome] {
+                    #expect(!BundleMatcher.matches(rule(nil, key, match), window))
+                    #expect(!BundleMatcher.matches(rule(Self.code, key, match), window))
+                }
+            }
+        }
+    }
+
     @Test func emptyKeyMatchesNothing() {
         #expect(!BundleMatcher.matches(rule(nil, "", .contains), flagsmith))
         #expect(!BundleMatcher.matches(rule(Self.code, "", .exact), flagsmith))

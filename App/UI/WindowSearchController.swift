@@ -109,9 +109,7 @@ final class WindowSearchModel {
     }
 
     private func recount() {
-        summaries = bundles.map { bundle in
-            BundleSummary(id: bundle.id, name: bundle.name, openWindows: members(of: bundle).count, files: bundle.files.count)
-        }
+        summaries = bundles.map { BundleSummary($0, windows: all) }
     }
 
     private func rerank(keepSelection: Bool) {
@@ -453,15 +451,7 @@ final class WindowSearchController {
     private func pick(_ index: Int, for target: PickerTarget) {
         guard model.pickerRows.indices.contains(index) else { return }
         model.selection = index
-        let id: UUID
-        switch model.pickerRows[index] {
-        case let .bundle(bundle):
-            id = bundle.id
-        case let .newBundle(name):
-            guard !name.isEmpty else { return shake() } // type a name first
-            id = store.create(named: name).id
-        }
-        store.add(target, to: id)
+        guard store.add(target, toRow: model.pickerRows[index]) else { return shake() } // type a name first
         model.bundles = store.bundles
         leavePicker()
     }
