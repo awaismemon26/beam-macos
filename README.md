@@ -4,7 +4,7 @@
 
 # Beam
 
-*Every window, one keystroke away.*
+_Every window, one keystroke away._
 
 **Native macOS window switcher and launcher.**<br>
 Jump to any window, launch apps, find files and calculate — from the keyboard.
@@ -54,8 +54,6 @@ Or install with [Homebrew](https://brew.sh) (step 2 still applies the first time
 brew install --cask awaismemon26/tap/beam
 ```
 
-Updates keep the Accessibility permission. Coming from 1.0.0, grant it once more.
-
 **Requirements:** macOS 15 or later, Apple silicon or Intel.
 **Using Raycast or Alfred?** Change Beam's launcher hotkey in **Settings ▸ Shortcuts**, or free ⌥ Space there.
 
@@ -63,20 +61,18 @@ Updates keep the Accessibility permission. Coming from 1.0.0, grant it once more
 
 Defaults — change any of them in **Settings ▸ Shortcuts**.
 
-| Shortcut | Action |
-|---|---|
-| <kbd>⌃</kbd> <kbd>Tab</kbd> | Windows of the current app — release <kbd>⌃</kbd> to jump, <kbd>Esc</kbd> to cancel |
-| <kbd>⌥</kbd> <kbd>Tab</kbd> | Search bundles and windows |
-| <kbd>⌥</kbd> <kbd>Space</kbd> | Launcher, calculator and file search |
+| Shortcut                      | Action                                                                              |
+| ----------------------------- | ----------------------------------------------------------------------------------- |
+| <kbd>⌃</kbd> <kbd>Tab</kbd>   | Windows of the current app — release <kbd>⌃</kbd> to jump, <kbd>Esc</kbd> to cancel |
+| <kbd>⌥</kbd> <kbd>Tab</kbd>   | Search bundles and windows                                                          |
+| <kbd>⌥</kbd> <kbd>Space</kbd> | Launcher, calculator and file search                                                |
 
 Inside the panels: <kbd>⏎</kbd> open · <kbd>⌘</kbd> <kbd>⏎</kbd> bring a bundle forward or open a file ·
 <kbd>⌘</kbd> <kbd>G</kbd> add to a bundle · <kbd>↑</kbd> earlier searches · <kbd>⌘</kbd> <kbd>,</kbd> Settings.
 
 ## Privacy
 
-Beam needs **Accessibility** to see and switch windows. File search uses macOS's Spotlight index for file names
-only; macOS may ask once for folder access when you turn it on. Nothing you search or group leaves your Mac — the
-only network request is for currency exchange rates.
+Beam needs **Accessibility** to see and switch windows. File search uses macOS's Spotlight index for file names only; macOS may ask once for folder access when you turn it on. Nothing you search or group leaves your Mac — the only network request is for currency exchange rates.
 
 ## Build from source
 
@@ -85,5 +81,5 @@ only network request is for currency exchange rates.
 
 ## License and credits
 
-[MIT](LICENSE). Calculator powered by [SoulverCore](https://github.com/soulverteam/SoulverCore). Reaching windows on
-other Desktops follows the technique documented by [AltTab](https://github.com/lwouis/alt-tab-macos).
+- [MIT](LICENSE)
+- Calculator powered by [SoulverCore](https://github.com/soulverteam/SoulverCore)
