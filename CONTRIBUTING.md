@@ -49,11 +49,14 @@ One-time setup: run `Tools/make-signing-cert.sh` (it writes `private/signing/Bea
 two values it prints as repository secrets `BEAM_SIGNING_P12_BASE64` and `BEAM_SIGNING_P12_PASSWORD` (GitHub ▸ Settings ▸
 Secrets and variables ▸ Actions). Every release is then signed with the same self-made "Beam" certificate, so macOS keeps
 Accessibility across updates. Keep `Beam.p12` safe and never commit it. Without the secrets this repository's release
-workflow fails on purpose (forks build ad-hoc). `Tools/build-release.sh <version>` builds the same zip locally.
+workflow fails on purpose (forks build ad-hoc). `Tools/build-release.sh <version>` builds the same disk image locally.
 
 1. Move the `[Unreleased]` notes in `CHANGELOG.md` under a new version heading.
 2. Tag and push: `git tag v1.1.0 && git push origin v1.1.0`.
-3. The **Release** workflow tests, builds a universal `Beam-<version>.zip` with a SHA-256 checksum and creates a
+3. The **Release** workflow tests, builds a universal `Beam-<version>.dmg` with a SHA-256 checksum and creates a
    **draft** GitHub release with the changelog notes. Review it and click **Publish**.
+4. Homebrew: the tap ([awaismemon26/homebrew-tap](https://github.com/awaismemon26/homebrew-tap)) checks for new releases
+   daily and opens a pull request that bumps `Casks/beam.rb`; merge it. You can also run its **Bump versions** workflow
+   by hand, or copy the release's `beam.rb` into `Casks/` yourself.
 
 By contributing, you agree that your contributions are licensed under the [MIT License](LICENSE).

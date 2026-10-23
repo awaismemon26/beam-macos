@@ -5,7 +5,8 @@ import Testing
 /// Keystroke budget checks with deliberately large inputs (600 apps, 300 windows): ranking must fit in
 /// one 60 Hz frame (16 ms). Release builds measure ~1–2 ms here. Unoptimised (debug) builds run Swift
 /// several times slower, so they get three frames. Run `swift test -c release -Xswiftc -enable-testing
-/// --filter PerformanceTests` for the shipping numbers.
+/// --filter PerformanceTests` for the shipping numbers; CI runs them that way, since debug timings on shared
+/// runners are too noisy to gate on.
 @Suite struct PerformanceTests {
     #if DEBUG
     static let frameBudget: Duration = .milliseconds(48)
@@ -82,12 +83,15 @@ import Testing
             ], files: ["/tmp/a"])
         }
         // Rule matching runs once when the panel opens (or the window list changes); only ranking runs per keystroke.
+        // Fastest of three, like keystrokes, so scheduler noise from tests running in parallel doesn't count.
         var summaries: [BundleSummary] = []
-        let counting = ContinuousClock().measure {
-            summaries = bundles.map {
-                BundleSummary(id: $0.id, name: $0.name, openWindows: BundleMatcher.windows(of: $0, in: windows).count, files: $0.files.count)
+        let counting = (0..<3).map { _ in
+            ContinuousClock().measure {
+                summaries = bundles.map {
+                    BundleSummary(id: $0.id, name: $0.name, openWindows: BundleMatcher.windows(of: $0, in: windows).count, files: $0.files.count)
+                }
             }
-        }
+        }.min()!
         let worst = Self.worstKeystroke(typing: "project notes") {
             BundleSearch.rank(windows: windows, bundles: summaries, query: $0).items.count
         }

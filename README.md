@@ -4,9 +4,9 @@
 
 # Beam
 
-*Every window, one keystroke away.*
+_Every window, one keystroke away._
 
-**Window switcher + productivity tool for macOS.**<br>
+**Native macOS window switcher and launcher.**<br>
 Jump to any window, launch apps, find files and calculate — from the keyboard.
 
 [![Latest release](https://img.shields.io/github/v/release/awaismemon26/beam-macos?label=release&color=7b5cff)](https://github.com/awaismemon26/beam-macos/releases/latest)
@@ -42,13 +42,17 @@ Jump to any window, launch apps, find files and calculate — from the keyboard.
 
 ## Install
 
-1. Download **`Beam-<version>.zip`** from the [latest release](https://github.com/awaismemon26/beam-macos/releases/latest),
-   unzip it and drag **Beam.app** into **Applications**.
-2. Open Beam. The first time, macOS can't verify it (Beam isn't notarized yet): open
-   **System Settings ▸ Privacy & Security** and click **Open Anyway**.
-3. Turn on **Accessibility** for Beam when asked. That's it.
+1. Download **`Beam-<version>.dmg`** from the [latest release](https://github.com/awaismemon26/beam-macos/releases/latest),
+   open it and drag **Beam** into **Applications**.
+2. Open Beam. Beam isn't notarized yet, so the first time macOS says it can't verify it. Click **Done** (not
+   Move to Trash), then open **System Settings ▸ Privacy & Security**, scroll down and click **Open Anyway**.
+3. Open Beam again and turn on **Accessibility** when it asks. That's it.
 
-Updates keep the Accessibility permission. Coming from 1.0.0, grant it once more.
+Or install with [Homebrew](https://brew.sh) (step 2 still applies the first time):
+
+```bash
+brew install --cask awaismemon26/tap/beam
+```
 
 **Requirements:** macOS 15 or later, Apple silicon or Intel.
 **Using Raycast or Alfred?** Change Beam's launcher hotkey in **Settings ▸ Shortcuts**, or free ⌥ Space there.
@@ -57,20 +61,18 @@ Updates keep the Accessibility permission. Coming from 1.0.0, grant it once more
 
 Defaults — change any of them in **Settings ▸ Shortcuts**.
 
-| Shortcut | Action |
-|---|---|
-| <kbd>⌃</kbd> <kbd>Tab</kbd> | Windows of the current app — release <kbd>⌃</kbd> to jump, <kbd>Esc</kbd> to cancel |
-| <kbd>⌥</kbd> <kbd>Tab</kbd> | Search bundles and windows |
-| <kbd>⌥</kbd> <kbd>Space</kbd> | Launcher, calculator and file search |
+| Shortcut                      | Action                                                                              |
+| ----------------------------- | ----------------------------------------------------------------------------------- |
+| <kbd>⌃</kbd> <kbd>Tab</kbd>   | Windows of the current app — release <kbd>⌃</kbd> to jump, <kbd>Esc</kbd> to cancel |
+| <kbd>⌥</kbd> <kbd>Tab</kbd>   | Search bundles and windows                                                          |
+| <kbd>⌥</kbd> <kbd>Space</kbd> | Launcher, calculator and file search                                                |
 
 Inside the panels: <kbd>⏎</kbd> open · <kbd>⌘</kbd> <kbd>⏎</kbd> bring a bundle forward or open a file ·
 <kbd>⌘</kbd> <kbd>G</kbd> add to a bundle · <kbd>↑</kbd> earlier searches · <kbd>⌘</kbd> <kbd>,</kbd> Settings.
 
 ## Privacy
 
-Beam needs **Accessibility** to see and switch windows. File search uses macOS's Spotlight index for file names
-only; macOS may ask once for folder access when you turn it on. Nothing you search or group leaves your Mac — the
-only network request is for currency exchange rates.
+Beam needs **Accessibility** to see and switch windows. File search uses macOS's Spotlight index for file names only; macOS may ask once for folder access when you turn it on. Nothing you search or group leaves your Mac — the only network request is for currency exchange rates.
 
 ## Build from source
 
@@ -79,5 +81,5 @@ only network request is for currency exchange rates.
 
 ## License and credits
 
-[MIT](LICENSE). Calculator powered by [SoulverCore](https://github.com/soulverteam/SoulverCore). Reaching windows on
-other Desktops follows the technique documented by [AltTab](https://github.com/lwouis/alt-tab-macos).
+- [MIT](LICENSE)
+- Calculator powered by [SoulverCore](https://github.com/soulverteam/SoulverCore)
