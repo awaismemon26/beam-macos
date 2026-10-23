@@ -18,15 +18,15 @@ Accessibility access across updates. Upgrading from 1.0.0: grant Accessibility o
   count such as "4 windows"; Enter opens the bundle view, and ⌘ Enter brings all of its open windows forward,
   across apps. Press ⌘ G on a highlighted window to add it, or ⇧ ⌘ G in file search to save a search;
   ⌘ ⌫ removes an item. Windows rejoin after a restart through title rules (for example a VS Code window for the
-  folder "flagsmith"). Rename, delete and edit rules, files and saved searches in **Settings ▸ Bundles**.
+  folder "acme-api"). Rename, delete and edit rules, files and saved searches in **Settings ▸ Bundles**.
 - **File search.** `f <text>` in the launcher, or the **Search Files** command, finds files by name (any word
   order, ignoring case and accents) in the folders you choose. Enter reveals the file in Finder, ⌘ Enter opens it.
   Off by default; turn it on in **Settings ▸ File Search**, where you also pick the folders (Desktop, Documents,
   Downloads, Pictures and iCloud Drive to start with). macOS may ask once for access to those folders when you
   turn it on.
 - **Search history.** The launcher and window search each remember your last 100 searches (only ones you used).
-  Press ↑ in an empty field to recall them, ↓ to go back. **Settings ▸ Launcher ▸ Clear Search History** empties
-  both.
+  Press ↑ in an empty field to recall them, ↓ to go back. **Settings ▸ Launcher ▸ Search History ▸ Clear**
+  empties both.
 - **Rebindable shortcuts.** **Settings ▸ Shortcuts** changes the Launcher (⌥ Space), Window search (⌥ Tab) and Window
   switcher (⌃ Tab) hotkeys, with a reset for each, and adds optional hotkeys for **Search Files** and **Beam
   Settings**. Beam refuses duplicates, warns about common system shortcuts, and always keeps one way in.
