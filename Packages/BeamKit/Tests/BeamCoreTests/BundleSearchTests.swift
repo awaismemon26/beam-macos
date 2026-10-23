@@ -5,7 +5,7 @@ import Testing
 @Suite struct BundleSearchTests {
     let acme = BundleSummary(id: UUID(), name: "acme-api", openWindows: 2, files: 0)
     let jobs = BundleSummary(id: UUID(), name: "Job applications", openWindows: 0, files: 3)
-    let azure = WindowInfo.fixture(id: 1, appName: "Code", title: "azure-pipelines.yml — acme-api")
+    let deploy = WindowInfo.fixture(id: 1, appName: "Code", title: "deploy.yml — acme-api")
     let gmail = WindowInfo.fixture(id: 2, appName: "Google Chrome", title: "Inbox (12) - Gmail")
     let notes = WindowInfo.fixture(id: 3, appName: "Notes", title: "Shopping")
 
@@ -22,7 +22,7 @@ import Testing
     }
 
     @Test func noBundlesBehavesLikeTheWindowRanker() {
-        let windows = [gmail, azure, notes]
+        let windows = [gmail, deploy, notes]
         let r = BundleSearch.rank(windows: windows, bundles: [], query: "chrome")
         #expect(r.items == WindowSearchRanker.rank(windows, query: "chrome").map { .window($0) })
         #expect(r.selection == 0)
@@ -31,15 +31,15 @@ import Testing
 
     @Test func aBundleThatMatchesBetterThanAnyWindowIsSelected() {
         // "acme-api" is an exact bundle name but only a substring of the window title.
-        let r = BundleSearch.rank(windows: [azure, gmail], bundles: [acme, jobs], query: "acme-api")
-        #expect(r.items == [.bundle(acme), .window(azure)])
+        let r = BundleSearch.rank(windows: [deploy, gmail], bundles: [acme, jobs], query: "acme-api")
+        #expect(r.items == [.bundle(acme), .window(deploy)])
         #expect(r.selection == 0)
     }
 
     @Test func aWindowThatMatchesAsWellOrBetterIsSelected() {
-        // "azure-pipe" matches only the window title; the bundle doesn't match at all.
-        let r = BundleSearch.rank(windows: [gmail, azure], bundles: [acme, jobs], query: "azure-pipe")
-        #expect(r.items == [.window(azure)])
+        // "deploy.y" matches only the window title; the bundle doesn't match at all.
+        let r = BundleSearch.rank(windows: [gmail, deploy], bundles: [acme, jobs], query: "deploy.y")
+        #expect(r.items == [.window(deploy)])
         #expect(r.selection == 0)
 
         // Equal tier (both prefix matches): the window wins the selection, bundles stay above.

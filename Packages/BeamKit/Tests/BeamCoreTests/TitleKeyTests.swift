@@ -4,9 +4,9 @@ import Testing
 @Suite struct TitleKeyTests {
     @Test(arguments: ["com.microsoft.VSCode", "com.microsoft.VSCodeInsiders"])
     func vsCodeUsesTheFolderPart(bundleID: String) {
-        #expect(TitleKey.extract(appBundleID: bundleID, title: "azure-pipelines.yml — acme-api") == "acme-api")
+        #expect(TitleKey.extract(appBundleID: bundleID, title: "deploy.yml — acme-api") == "acme-api")
         #expect(TitleKey.extract(appBundleID: bundleID, title: "acme-api") == "acme-api")
-        #expect(TitleKey.extract(appBundleID: bundleID, title: "aie (Workspace)") == "aie")
+        #expect(TitleKey.extract(appBundleID: bundleID, title: "my-project (Workspace)") == "my-project")
         #expect(TitleKey.extract(appBundleID: bundleID, title: "● main.swift — beam") == "beam")
     }
 
@@ -14,7 +14,7 @@ import Testing
         let code = "com.microsoft.VSCode"
         #expect(TitleKey.extract(appBundleID: code, title: "main.swift — beam — Work") == "beam")
         #expect(TitleKey.extract(appBundleID: code, title: "● main.swift — beam — Work") == "beam")
-        #expect(TitleKey.extract(appBundleID: code, title: "main.swift — aie (Workspace) — Work") == "aie")
+        #expect(TitleKey.extract(appBundleID: code, title: "main.swift — my-project (Workspace) — Work") == "my-project")
     }
 
     @Test func vsCodeDirtyMarkerIsIgnoredWithoutAFolder() {

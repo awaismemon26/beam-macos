@@ -4,7 +4,7 @@ import Testing
 
 @Suite struct BundleMatcherTests {
     static let code = "com.microsoft.VSCode"
-    let acme = WindowInfo.fixture(id: 1, bundleID: code, title: "azure-pipelines.yml — acme-api")
+    let acme = WindowInfo.fixture(id: 1, bundleID: code, title: "deploy.yml — acme-api")
     let acmeDocs = WindowInfo.fixture(id: 2, bundleID: code, title: "main.go — acme-api-docs")
     let mentions = WindowInfo.fixture(id: 3, bundleID: code, title: "acme-api-notes.md — other")
     let otherApp = WindowInfo.fixture(id: 4, bundleID: "com.apple.dt.Xcode", title: "acme-api — Foo.swift")
@@ -74,7 +74,7 @@ import Testing
 
     @Test func windowWhoseTitleMovedAwayLeavesTheBundle() {
         let r = BundleMatcher.rule(for: acme)
-        let moved = WindowInfo.fixture(id: 1, bundleID: Self.code, title: "azure-pipelines.yml — elsewhere")
+        let moved = WindowInfo.fixture(id: 1, bundleID: Self.code, title: "deploy.yml — elsewhere")
         #expect(!BundleMatcher.matches(r, moved))
     }
 

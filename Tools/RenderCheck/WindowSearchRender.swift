@@ -7,8 +7,8 @@ func w(_ id: UInt32, _ app: String, _ title: String) -> WindowInfo {
     WindowInfo(id: id, pid: pid_t(id % 7 + 100), appName: app, appSearchNames: [app], bundleID: nil, title: title,
                isMinimized: false, spaceNumber: nil, isOnCurrentSpace: true, isReachable: true)
 }
-let apps = ["Microsoft Outlook", "Claude", "Code - Insiders", "Paper", "Microsoft Teams", "App Store", "Code", "Activity Monitor",
-            "Podman Desktop", "draw.io", "Postman", "Bitwarden", "Calendar", "Obsidian", "iTerm2"]
+let apps = ["Mail", "Notes", "Reminders", "Safari", "Messages", "App Store", "Music", "Activity Monitor",
+            "Maps", "Photos", "Preview", "Terminal", "Calendar", "Freeform", "Xcode"]
 var windows: [WindowInfo] = []
 var nextID: UInt32 = 1000
 for (i, app) in apps.enumerated() {

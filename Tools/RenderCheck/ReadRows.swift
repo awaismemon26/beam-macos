@@ -14,6 +14,6 @@ try VNImageRequestHandler(cgImage: ctx.makeImage()!).perform([request])
 let lines = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }
 let text = lines.joined(separator: " ")
 let expected = ["Chrome tab 2", "Chrome tab 6", "Chrome tab 11"]
-let strays = ["window 0", "window 1", "window 2", "Outlook", "Claude", "Insiders"]
+let strays = ["window 0", "window 1", "window 2", "Mail", "Notes", "Reminders"]
 print("missing:", expected.filter { !text.contains($0) }, "strays:", strays.filter { text.contains($0) })
 print(expected.allSatisfy { text.contains($0) } && !strays.contains { text.contains($0) } ? "PASS" : "FAIL")
