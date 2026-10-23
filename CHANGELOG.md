@@ -5,6 +5,58 @@ All notable changes to Beam are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-23
+
+Every window, one keystroke away.
+
+Beam 1.1 adds Bundles, file search and search history, lets you rebind every global shortcut, and keeps
+Accessibility access across updates. Upgrading from 1.0.0: grant Accessibility once more; future updates keep it.
+
+### Added
+
+- **Bundles.** Group the windows and files of one project or task. ⌥ Tab lists bundles first, each with a grey
+  count such as "4 windows"; Enter opens the bundle view, and ⌘ Enter brings all of its open windows forward,
+  across apps. Press ⌘ G on a highlighted window to add it, or ⇧ ⌘ G in file search to save a search;
+  ⌘ ⌫ removes an item. Windows rejoin after a restart through title rules (for example a VS Code window for the
+  folder "flagsmith"). Rename, delete and edit rules, files and saved searches in **Settings ▸ Bundles**.
+- **File search.** `f <text>` in the launcher, or the **Search Files** command, finds files by name (any word
+  order, ignoring case and accents) in the folders you choose. Enter reveals the file in Finder, ⌘ Enter opens it.
+  Off by default; turn it on in **Settings ▸ File Search**, where you also pick the folders (Desktop, Documents,
+  Downloads, Pictures and iCloud Drive to start with). macOS may ask once for access to those folders when you
+  turn it on.
+- **Search history.** The launcher and window search each remember your last 100 searches (only ones you used).
+  Press ↑ in an empty field to recall them, ↓ to go back. **Settings ▸ Launcher ▸ Clear Search History** empties
+  both.
+- **Rebindable shortcuts.** **Settings ▸ Shortcuts** changes the Launcher (⌥ Space), Window search (⌥ Tab) and Window
+  switcher (⌃ Tab) hotkeys, with a reset for each, and adds optional hotkeys for **Search Files** and **Beam
+  Settings**. Beam refuses duplicates, warns about common system shortcuts, and always keeps one way in.
+- **Show Beam on.** Choose the screen with the mouse, the screen with the active window, or the primary screen for
+  all three panels.
+- **Calculator switch.** Turn the launcher's calculator row off in **Settings ▸ Calculator**.
+- The tagline on the About pane.
+
+### Changed
+
+- **One Beam at a time.** Opening a second copy shows Settings in the one that is running instead of starting
+  another. Opening a newer version replaces the older one, and only a copy in Applications takes over the login
+  item.
+- **Settings reorganised** into General, Shortcuts, Launcher, Calculator, File Search, Bundles and About.
+  Currency-rate status and Refresh moved to Calculator; the Beam Hotkey moved to Shortcuts.
+- **Updates keep Accessibility.** Releases are signed with the same self-made certificate every time, so macOS no
+  longer forgets the permission after an update. It does not replace the one-time **Open Anyway** step: Beam is
+  still not notarized.
+- About no longer names the calculator engine.
+
+### For developers
+
+- New pure, tested logic in `BeamCore`: shortcut bindings and validation, search history, file-query parsing,
+  bundle rules and matching, title-key extraction, screen choice and the single-instance launch decision
+  (223 tests in all).
+- The end-to-end suite and README demo now cover history recall, file search and bundles, and no longer need a
+  US keyboard layout.
+- `Tools/make-signing-cert.sh` creates the release certificate; the release workflow signs with it when the
+  secrets are set and falls back to ad-hoc signing for forks.
+
 ## [1.0.0] - 2026-10-21
 
 Every window, one keystroke away.
@@ -84,5 +136,6 @@ Every window, one keystroke away.
   drafts the release.
 - Build from source with `Tools/install.sh`; an optional `.env` holds your signing team.
 
-[Unreleased]: https://github.com/awaismemon26/beam-macos/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/awaismemon26/beam-macos/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/awaismemon26/beam-macos/releases/tag/v1.1.0
 [1.0.0]: https://github.com/awaismemon26/beam-macos/releases/tag/v1.0.0

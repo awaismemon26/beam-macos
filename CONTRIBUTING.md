@@ -24,7 +24,7 @@ Tools/install.sh        # or: build, install into /Applications and launch
 
 - `Packages/BeamKit/Sources/BeamCore` — pure logic with no UI: hotkey classification, the switcher state
   machine, fuzzy matching, ranking, the calculator gate. Anything testable without a window belongs here.
-- `Packages/BeamKit/Sources/BeamCalc` — the SoulverCore wrapper.
+- `Packages/BeamKit/Sources/BeamCalc` — the calculator engine wrapper.
 - `App/System` — event tap, Accessibility, window enumeration and focusing, settings storage.
 - `App/UI` — panels and SwiftUI views.
 
