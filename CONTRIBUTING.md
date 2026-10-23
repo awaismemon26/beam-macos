@@ -4,7 +4,7 @@ Thanks for helping make Beam better! Bug reports, feature ideas and pull request
 
 ## Reporting bugs and ideas
 
-Open an [issue](https://github.com/awaismemon26/beam/issues/new/choose) using the bug or feature template.
+Open an [issue](https://github.com/awaismemon26/beam-macos/issues/new/choose) using the bug or feature template.
 For bugs, include your macOS version, Beam version (Settings ▸ About) and the steps to reproduce.
 
 ## Development setup
